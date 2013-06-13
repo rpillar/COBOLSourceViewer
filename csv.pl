@@ -90,8 +90,7 @@ else
     closedir(BIN);
 }
 
-sub process
-{
+sub process {
 	$i_path = $_[0];
 	$p_file = $_[1];
 	$o_path = $_[2];

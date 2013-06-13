@@ -126,8 +126,7 @@ sub process {
 	close (INFO);
 }	
 
-sub build_source_list
-{
+sub build_source_list {
 	my $href1;
 	my $href2;
 	my @sorted_copy;

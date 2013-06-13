@@ -1,0 +1,47 @@
+body {
+    font : 100.01% "Trebuchet MS", Verdana, Arial, sans-serif;
+}
+
+#divisions {
+    position: fixed;
+    left: 15px;
+    top: 10px;
+}
+#divisions a {
+    color: black;
+}
+.div_name {
+    color: red;
+}
+.section_name {
+    color: red;
+}
+.keyword {
+    color: red;
+}
+#sections_list {
+    position: fixed;
+    left: 15px;
+    top: 300px;
+}
+#sections_list a {
+    color: black;
+}
+#copybooks {
+    position: fixed;
+    left: 925px;
+    top: 15px;
+}
+#copybooks a {
+    color: black;
+}
+#code {
+    position: absolute;
+    left: 270px;
+    top: 15px;
+    color: black;
+    font-size: 1.15em;
+}
+.comments {
+    color: blue;
+}

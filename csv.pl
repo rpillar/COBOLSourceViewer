@@ -36,95 +36,94 @@
 #!/usr/bin/perl
 
 use strict;
+use warnings;
+
 use List::Compare qw / get_intersection /;
 
-# define variables - a long list !!!
+sub main() {
+	# define variables - a long list !!!
 
-my $numArgs;
-my $i_path;
-my $o_path;
-my $p_file;
-my $file;
-my $input_name;
-my $fullname;
-my $source_out;
-my $sec_tag;
-my $copy_tag;
-my $line_no;
-my $no_of_lines;
-my @program;
-my %copys;
-my %sections = ();
-my %sections_list = ();
+	my $numArgs;
+	my $i_path;
+	my $o_path;
+	my $p_file;
+	my $file;
+	my $input_name;
+	my $fullname;
+	my $source_out;
+	my $sec_tag;
+	my $copy_tag;
+	my $line_no;
+	my $no_of_lines;
+	my @program;
+	my %copys;
+	my %sections = ();
+	my %sections_list = ();
 
-$" = '#';
+	$" = '#';
 
-if ($#ARGV < 1)
-{
-	print "\nError - input pathname / output pathname not specified\n";
-	print "Usage :- perl CSV.pl <input pathname> <output pathname> \n\n";
-}
-else
-{
-    $i_path = $ARGV[0];
-    $o_path = $ARGV[1];
-    print "\nInput Path - $i_path";
-    print "\nOutput Path - $o_path\n";
-    opendir(BIN, $i_path) or die "Can't open $i_path: $!";
-    while( defined ($file = readdir BIN) ) 
-    {
-        if ($file eq ".")
-        {
-            print "\nProcessed Dir_Header";
-        }
-        elsif ($file eq "..")
-        {
-            print "\nProcessed Dir_Parent";            
-        }
-        else
-        {
-            &process ($i_path, $file, $o_path)  #### print "$file\n" if -T "$path/$file";
-        }
+	if ($#ARGV < 1) {
+		print "\nError - input pathname / output pathname not specified\n";
+		print "Usage :- perl CSV.pl <input pathname> <output pathname> \n\n";
+	}
+	else {
+		$i_path = $ARGV[0];
+		$o_path = $ARGV[1];
+		print "\nInput Path - $i_path";
+		print "\nOutput Path - $o_path\n";
+		opendir(BIN, $i_path) or die "Can't open $i_path: $!";
+		
+		while( defined ($file = readdir BIN) ) {
+			if ($file eq ".") {
+				print "\nProcessed Dir_Header";
+			}
+			elsif ($file eq "..") {
+				print "\nProcessed Dir_Parent";            
+			}
+			else {
+				process ($i_path, $file, $o_path)  #### print "$file\n" if -T "$path/$file";
+			}
         
-        %sections = ();
-        %sections_list = ();
-    }
-    closedir(BIN);
-}
+			%sections = ();
+			%sections_list = ();
+		}
+		closedir(BIN);
+	}
+} # end of main ...
 
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
 sub process {
-	$i_path = $_[0];
-	$p_file = $_[1];
-	$o_path = $_[2];
+	my ($i_path, $p_file, $o_path) = @_;
+
 	print "\nProcessing file $p_file\n";
 	$input_name = $p_file;  
 	$input_name =~ s/.txt$//;  # remove trailing file extension - '.txt'
 	
-	$fullname = "$i_path$p_file";
+	$fullname = $i_path . $p_file;
 
 	if (!open(INFO, $fullname))
 	{
 		die "\nCould not open file : $fullname. Program stopped\n\n";
 	}	
     
-# open files - initialize as new 
-
+	# open files - initialize as new ...
 	$source_out = $o_path."/".$input_name.'.html';
 	open(OUT_1, ">$source_out");
 
 	$sec_tag = 0;
 	$line_no = 0;
 
-	&setup_program();	
-	&section_copy_links();
-	&process_keywords();
-	&build_source_list();
+	setup_program();	
+	section_copy_links();
+	process_keywords();
+	build_source_list();
 	
 	print "\nProcessed file $p_file\n";
 
 
-# close files
-
+	# close files
 	close (INFO);
 }	
 

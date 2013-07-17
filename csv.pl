@@ -74,13 +74,7 @@ sub main() {
 		opendir(BIN, $i_path) or die "Can't open $i_path: $!";
 		
 		while( defined ($file = readdir BIN) ) {
-			if ($file eq ".") {
-				print "\nProcessed Dir_Header";
-			}
-			elsif ($file eq "..") {
-				print "\nProcessed Dir_Parent";            
-			}
-			else {
+			if (-T $file) {
 				process ($i_path, $file, $o_path)  #### print "$file\n" if -T "$path/$file";
 			}
         
@@ -99,7 +93,7 @@ sub process {
 
 	print "\nProcessing file $p_file\n";
 	$input_name = $p_file;  
-	$input_name =~ s/.txt$//;  # remove trailing file extension - '.txt'
+	$input_name =~ s/i\.txt$|\.cbl$|\.CBL$//;  # remove trailing file extension - 'txt/cbl/CBL'
 	
 	$fullname = $i_path . $p_file;
 

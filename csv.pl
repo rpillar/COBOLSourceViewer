@@ -40,7 +40,9 @@ use warnings;
 
 use List::Compare qw / get_intersection /;
 
-sub main() {
+# main 'control' process ...
+
+{
 	# define variables - a long list !!!
 
 	my $numArgs;
@@ -97,8 +99,7 @@ sub process {
 	
 	$fullname = $i_path . $p_file;
 
-	if (!open(INFO, $fullname))
-	{
+	if (!open(INFO, $fullname)) {
 		die "\nCould not open file : $fullname. Program stopped\n\n";
 	}	
     

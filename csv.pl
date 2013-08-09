@@ -122,6 +122,9 @@ sub process {
 	close (INFO);
 }	
 
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
 sub build_source_list {
 	my $href1;
 	my $href2;
@@ -195,33 +198,31 @@ sub build_source_list {
 	print OUT_1 "</html>";
 }
 
-sub setup_program
-{
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
+sub setup_program {
 	my $line;
-	my $procedure = 0;
 	my $length_all;
 	my $length_rest;
 	my $first_7;
 	my $the_rest;
 	my @words;
 	
-	$line_no = 0;	
-	$procedure = "";
-	$copy_tag = 0;
-	$sec_tag = 0;
+	my $line_no   = 0;	
+	my $procedure = "";
+	my $copy_tag  = 0;
+	my $sec_tag   = 0;
 	
-	while (defined ($line = <INFO>))
-	{
+	while (defined ($line = <INFO>)) {
 		$line =~ s/\r|\n//g;    # remove carriage returns / line feeds
 		chomp $line;            # just in case !!!
 		$length_all = length($line);
 		
-		if ($length_all == 0)
-		{
+		if ($length_all == 0) {
 			$program[$line_no] = "        ";
 		}
-		else
-		{
+		else {
 			$length_rest = $length_all - 7;
 			$first_7 = substr($line, 0, 7);
 			$the_rest = substr($line, 7, $length_rest);
@@ -229,24 +230,19 @@ sub setup_program
 		
 ### process 'DIVISION' statements ###
 		
-			if (/DIVISION/i)
-			{
+			if (/DIVISION/i) {
 				@words = split(/ /, $the_rest);
 				$_ = $words[0];
-				if (/IDENTIFICATION/i)
-				{
+				if (/IDENTIFICATION/i) {
 					$program[$line_no] = "<span class=\"div_name\"><a name=\"Id_Div\">".$line."</a></span>";
 				}
-				elsif (/ENVIRONMENT/i)
-				{
+				elsif (/ENVIRONMENT/i) {
 					$program[$line_no] = "<span class=\"div_name\"><a name=\"Env_Div\">".$line."</a></span>";				
 				}
-				elsif (/DATA/i)
-				{
+				elsif (/DATA/i) {
 					$program[$line_no] = "<span class=\"div_name\"><a name=\"Data_Div\">".$line."</a></span>";				
 				}			
-				elsif (/PROCEDURE/i)
-				{
+				elsif (/PROCEDURE/i) {
 					$program[$line_no] = "<span class=\"div_name\"><a name=\"Proc_Div\">".$line."</a></span>";
 					$procedure = 1;				
 				}			
@@ -255,41 +251,32 @@ sub setup_program
 		
 ### process 'SECTION' names ###
 		
-			elsif(/ SECTION[.]/i)
-			{
+			elsif(/ SECTION[.]/i) {
 				$sec_tag++;
 				@words = split(/ /, $the_rest);
-				if (substr($first_7, 6, 1) eq '*')
-				{
+				if (substr($first_7, 6, 1) eq '*') {
 					$program[$line_no] = "<span class=\"comments\">".$line."</span>";			
 				}	
-				else 
-				{
+				else {
 					$_ = $words[0];
 					if (!$procedure) {
-						if (/INPUT-OUTPUT/i)
-						{
+						if (/INPUT-OUTPUT/i) {
 							$program[$line_no] = "<span class=\"section_name\"><a name=\"InOut_Sec\">".$line."</a></span>";				
 						}			
-						elsif (/FILE/i)
-						{
+						elsif (/FILE/i) {
 							$program[$line_no] = "<span class=\"section_name\"><a name=\"File_Sec\">".$line."</a></span>";				
 						}
-						elsif (/WORKING-STORAGE/i)
-						{
+						elsif (/WORKING-STORAGE/i) {
 							$program[$line_no] = "<span class=\"section_name\"><a name=\"WS_Sec\">".$line."</a></span>";				
 						}
-						elsif (/LINKAGE/i)
-						{
+						elsif (/LINKAGE/i) {
 							$program[$line_no] = "<span class=\"section_name\"><a name=\"Link_Sec\">".$line."</a></span>";				
 						}
-						elsif (/CONFIGURATION/i)
-						{
+						elsif (/CONFIGURATION/i) {
 							$program[$line_no] = "<span class=\"section_name\"><a name=\"Conf_Sec\">".$line."</a></span>";				
 						}
 					}
-				else
-					{
+					else {
 						if ($procedure) {
 							$sections{$words[0]}="#SEC$sec_tag";
 							$sections_list{$words[0]}="#SEC$sec_tag";
@@ -300,16 +287,13 @@ sub setup_program
 				@words=();
 			}
 	
-			elsif(/ COPY /i)
-			{
+			elsif(/ COPY /i) {
 				$copy_tag++;
 				@words = split(/ +/, $the_rest);
-				if (substr($first_7, 6, 1) eq '*')
-				{
-					$program[$line_no] = "<span class=\"comments\">".$line."</span>";				
+				if (substr($first_7, 6, 1) eq '*') {
+					$program[$line_no] = "<span class=\"comments\">".$line."</span>";		
 				}	
-				else 
-				{
+				else {
 					$words[2] =~ s/\.$//;
 					$copys{$words[2]}="#COPY$copy_tag";
 					$program[$line_no] = $line;	
@@ -318,30 +302,24 @@ sub setup_program
 
 ### process other 'names' that start in position 8 - 'PARAGRAPH' names ###	
 
-			else
-			{			
+			else {			
 				@words = split(/ /, $the_rest);
-				if (substr($first_7, 6, 1) eq '*')
-				{
+				if (substr($first_7, 6, 1) eq '*') {
 					$program[$line_no] = "<span class=\"comments\">".$line."</span>";			
 				}
-				elsif (substr($first_7, 6, 1) eq '/')
-				{
+				elsif (substr($first_7, 6, 1) eq '/') {
 					$program[$line_no] = "<span class=\"comments\">".$line."</span>";			
 				}
-				elsif ($length_rest < 1)    # process null lines !!!
-				{
+				elsif ($length_rest < 1) {    # process null lines !!!
 					$program[$line_no] = $line;
 				}
-				elsif ((substr($the_rest, 0, 1) ne " ") && $procedure)
-				{
+				elsif ((substr($the_rest, 0, 1) ne " ") && $procedure) {
 					$sec_tag++;
 					$words[0] =~ s/\.$//;
 					$sections{$words[0]}="#SEC$sec_tag";
 					$program[$line_no] = "<a name=\"SEC$sec_tag\">".$line."</a>";
 				}
-				else
-				{
+				else {
 					$program[$line_no] = $line;
 				}
 				@words=();
@@ -353,6 +331,9 @@ sub setup_program
 	$no_of_lines = $line_no;
 }
 
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
 ### process the links for Section / Copy names / Go Tos etc ###
 
 sub section_copy_links
@@ -502,6 +483,9 @@ sub section_copy_links
 	}		
 }
 
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
 sub process_keywords
 {
 	my $line;

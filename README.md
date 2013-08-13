@@ -7,18 +7,14 @@ Setup
 Create the following folders :-
 
 ./source/code
-
-    where the COBOL code needs to go
+where the COBOL code needs to go
     
 ./source/copy
-
-    where the COBOL copybooks need to go
+where the COBOL copybooks need to go
     
 ./html/code
-
-    the processed COBOL html files go here
+the processed COBOL html files go here
     
 ./html/copy
-
-    the processed COBOL copybook go here
+the processed COBOL copybook go here
 

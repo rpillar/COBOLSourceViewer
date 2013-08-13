@@ -2,7 +2,23 @@ Currently the script reads a COBOL source file and wraps it in HTML thereby allo
 Setup
 -----
 
+###Create folders
+
 Create the following folders :-
 
-    This is a code blok - what will it look like
-	We will find out ...
+./source/code
+
+    where the COBOL code needs to go
+    
+./source/copy
+
+    where the COBOL copybooks need to go
+    
+./html/code
+
+    the processed COBOL html files go here
+    
+./html/copy
+
+    the processed COBOL copybook go here
+

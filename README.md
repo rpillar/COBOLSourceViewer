@@ -4,17 +4,12 @@ Setup
 
 ###Create folders
 
-Create the following folders :-
+Create the appropriate folder structure :-
 
-**./source/code**  
->where the COBOL code needs to go
-
-**./source/copy**  
->where the COBOL copybooks need to go
-
-**./html/code**  
->the processed COBOL html files go here
-
-**./html/copy**  
->the processed COBOL copybook go here
+    mkdir ./source/code**  
+    mkdir ./source/copy**  
+    mkdir ./html/code**  
+    mkdir ./html/copy**  
+    
+Place all your COBOL code in the ./source/code folder and the COBOL copybook code in the ./source/copy folder.    
 

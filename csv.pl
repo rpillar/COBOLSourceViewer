@@ -38,57 +38,37 @@
 use strict;
 use warnings;
 
+use Getopt::Long;
 use List::Compare qw / get_intersection /;
 
 # main 'control' process ...
 
 {
-	# define variables - a long list !!!
 
-	my $numArgs;
-	my $i_path;
-	my $o_path;
-	my $p_file;
-	my $file;
-	my $input_name;
-	my $fullname;
-	my $source_out;
-	my $sec_tag;
-	my $copy_tag;
-	my $line_no;
-	my $no_of_lines;
-	my @program;
-	my %copys;
-	my %sections = ();
-	my %sections_list = ();
+    my $i_path;
+    my $o_path;
+    GetOptions( "input=s", \$i_path, "output=s", \$o_path );
+    unless ( $i_path && $o_path ) {
+        usage();
+        exit;
+    }
 
-	$" = '#';
-
-	if ($#ARGV < 1) {
-		print "\nError - input pathname / output pathname not specified\n";
-		print "Usage :- perl CSV.pl <input pathname> <output pathname> \n\n";
-	}
-	else {
-		$i_path = $ARGV[0];
-		$o_path = $ARGV[1];
-		print "\nInput Path - $i_path";
-		print "\nOutput Path - $o_path\n";
-		opendir(BIN, $i_path) or die "Can't open $i_path: $!";
-		
-		while( defined ($file = readdir BIN) ) {
-			if (-T $file) {
-				process ($i_path, $file, $o_path)  #### print "$file\n" if -T "$path/$file";
-			}
-        
-			%sections = ();
-			%sections_list = ();
+	print "\nInput Path - $i_path";
+	print "\nOutput Path - $o_path\n";
+	opendir(BIN, $i_path) or die "Can't open $i_path: $!";
+	
+	# process all files in the 'input' folder ...	
+	while( defined ($file = readdir BIN) ) {
+		if (-T $file) {
+			process ($i_path, $file, $o_path)
 		}
-		closedir(BIN);
 	}
+	closedir(BIN);
+
 } # end of main ...
 
 #------------------------------------------------------------------------------
-#
+# Process the specified file
 #------------------------------------------------------------------------------
 sub process {
 	my ($i_path, $p_file, $o_path) = @_;
@@ -102,15 +82,17 @@ sub process {
 	if (!open(INFO, $fullname)) {
 		die "\nCould not open file : $fullname. Program stopped\n\n";
 	}	
+	
+	# input file
+	my @infile = <INFO>;
     
-	# open files - initialize as new ...
+	# open output files - initialize as new ...
 	$source_out = $o_path."/".$input_name.'.html';
 	open(OUT_1, ">$source_out");
 
-	$sec_tag = 0;
-	$line_no = 0;
-
-	setup_program();	
+    # process - identify 'main' section / copy / paragraph links
+	add_main_links(\@infile);	
+	
 	section_copy_links();
 	process_keywords();
 	build_source_list();
@@ -120,90 +102,16 @@ sub process {
 
 	# close files
 	close (INFO);
-}	
-
-#------------------------------------------------------------------------------
-#
-#------------------------------------------------------------------------------
-sub build_source_list {
-	my $href1;
-	my $href2;
-	my @sorted_copy;
-	my @sections_keys;
-	my @sections_values;
-	my $length;
-	my $y;
-	
-	print OUT_1 "<!doctype html>";
-	print OUT_1 "<html>";
-	print OUT_1 "<head>";
-	print OUT_1 "<meta charset=\"utf-8\">";
-	print OUT_1 "<title>COBOL Source Viewer</title>";
-	print OUT_1 "<link rel=\"stylesheet\" type=\"text/css\" href=\"csv.css\">";
-	print OUT_1 "</head>";
-	print OUT_1 "<body>";
-
-	print OUT_1 "<div id=\"divisions\">";
-	print OUT_1 "<br>"."<a href=\"#Id_Div\">Identification Division</a"."<br>";
-	print OUT_1 "<br>"."<a href=\"#Env_Div\">Environment Division</a"."<br>";
-	print OUT_1 "<br>"."<a href=\"#Data_Div\">Data Division</a"."<br>";	
-	print OUT_1 "<br>"."<a href=\"#WS_Sec\">Working Storage</a"."<br>";
-	print OUT_1 "<br>"."<a href=\"#Link_Sec\">Linkage Section</a"."<br>";
-	print OUT_1 "<br>"."<a href=\"#Proc_Div\">Procedure Division</a"."<br>";
-	print OUT_1 "<br>"."<hr>";
-	print OUT_1 "</div>";
-
-	print OUT_1 "<div id=\"code\">";
-	print OUT_1 "<pre>";	
-	$line_no = 0;
-	while ($line_no <= $no_of_lines)
-	{
-		print OUT_1 $program[$line_no]."<br>";
-		$line_no++;
-	}
-	print OUT_1 "</pre>";
-	print OUT_1 "</div>";
-
-### sort the sections list and place in html page ###
-
-	print OUT_1 "<div id=\"sections_list\">";
-	$href1 = "<a href=\"";
-	$href2 = "\">";
-	@sections_keys = keys %sections_list;
-	@sections_keys = sort(@sections_keys);
-	$length = @sections_keys;
-	$length--;
-	for ($y = 0; $y <= $length && $sections_keys[$y] ne "x"; $y++)
-	{
-		print OUT_1 $href1.$sections_list{$sections_keys[$y]}.$href2.$sections_keys[$y]." <a/>"."<br>";		
-	}
-	print OUT_1 "</div>";
-	
-### sort the copybook list and place in html page ###
-
-	print OUT_1 "<div id=\"copybooks\">";
-	$href1 = "<a href=\"".$o_path."copy/";
-	$href2 = ".html\"target=\"_blank\">";	
-	@sorted_copy = keys %copys;
-	@sorted_copy = sort(@sorted_copy);
-	$length = @sorted_copy;
-	$length--;
-	for ($y = 0; $y <= $length && $sorted_copy[$y] ne "x"; $y++)
-	{
-		print OUT_1 $href1.$sorted_copy[$y].$href2.$sorted_copy[$y]." <a/>"."<br>";		
-	}
-	print OUT_1 "</div>";
-	
-	print OUT_1 "</body>";
-	print OUT_1 "</html>";
 }
 
 #------------------------------------------------------------------------------
 #
 #------------------------------------------------------------------------------
-sub setup_program {
-	my $line;
-	my $length_all;
+sub add_main_links {
+
+    my $file = shift:
+    
+    # variables ...
 	my $length_rest;
 	my $first_7;
 	my $the_rest;
@@ -214,19 +122,22 @@ sub setup_program {
 	my $copy_tag  = 0;
 	my $sec_tag   = 0;
 	
-	while (defined ($line = <INFO>)) {
+	foreach my $line ( @{$file} ) {
 		$line =~ s/\r|\n//g;    # remove carriage returns / line feeds
 		chomp $line;            # just in case !!!
-		$length_all = length($line);
+		my $length_all = length($line);
 		
+		# blank line - just set to 'section A' - spaces 
 		if ($length_all == 0) {
 			$program[$line_no] = "        ";
-		}
-		else {
-			$length_rest = $length_all - 7;
-			$first_7 = substr($line, 0, 7);
-			$the_rest = substr($line, 7, $length_rest);
-			$_ = $line;
+			next;
+		}		
+		
+		# split 'line' - section 'A' / 'B'
+		$length_rest = $length_all - 7;
+		$first_7 = substr($line, 0, 7);
+		$the_rest = substr($line, 7, $length_rest);
+		$_ = $line;
 		
 ### process 'DIVISION' statements ###
 		
@@ -329,6 +240,82 @@ sub setup_program {
 	}
 	$line_no--;
 	$no_of_lines = $line_no;
+}	
+
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
+sub build_source_list {
+	my $href1;
+	my $href2;
+	my @sorted_copy;
+	my @sections_keys;
+	my @sections_values;
+	my $length;
+	my $y;
+	
+	print OUT_1 "<!doctype html>";
+	print OUT_1 "<html>";
+	print OUT_1 "<head>";
+	print OUT_1 "<meta charset=\"utf-8\">";
+	print OUT_1 "<title>COBOL Source Viewer</title>";
+	print OUT_1 "<link rel=\"stylesheet\" type=\"text/css\" href=\"csv.css\">";
+	print OUT_1 "</head>";
+	print OUT_1 "<body>";
+
+	print OUT_1 "<div id=\"divisions\">";
+	print OUT_1 "<br>"."<a href=\"#Id_Div\">Identification Division</a"."<br>";
+	print OUT_1 "<br>"."<a href=\"#Env_Div\">Environment Division</a"."<br>";
+	print OUT_1 "<br>"."<a href=\"#Data_Div\">Data Division</a"."<br>";	
+	print OUT_1 "<br>"."<a href=\"#WS_Sec\">Working Storage</a"."<br>";
+	print OUT_1 "<br>"."<a href=\"#Link_Sec\">Linkage Section</a"."<br>";
+	print OUT_1 "<br>"."<a href=\"#Proc_Div\">Procedure Division</a"."<br>";
+	print OUT_1 "<br>"."<hr>";
+	print OUT_1 "</div>";
+
+	print OUT_1 "<div id=\"code\">";
+	print OUT_1 "<pre>";	
+	$line_no = 0;
+	while ($line_no <= $no_of_lines)
+	{
+		print OUT_1 $program[$line_no]."<br>";
+		$line_no++;
+	}
+	print OUT_1 "</pre>";
+	print OUT_1 "</div>";
+
+### sort the sections list and place in html page ###
+
+	print OUT_1 "<div id=\"sections_list\">";
+	$href1 = "<a href=\"";
+	$href2 = "\">";
+	@sections_keys = keys %sections_list;
+	@sections_keys = sort(@sections_keys);
+	$length = @sections_keys;
+	$length--;
+	for ($y = 0; $y <= $length && $sections_keys[$y] ne "x"; $y++)
+	{
+		print OUT_1 $href1.$sections_list{$sections_keys[$y]}.$href2.$sections_keys[$y]." <a/>"."<br>";		
+	}
+	print OUT_1 "</div>";
+	
+### sort the copybook list and place in html page ###
+
+	print OUT_1 "<div id=\"copybooks\">";
+	$href1 = "<a href=\"".$o_path."copy/";
+	$href2 = ".html\"target=\"_blank\">";	
+	@sorted_copy = keys %copys;
+	@sorted_copy = sort(@sorted_copy);
+	$length = @sorted_copy;
+	$length--;
+	for ($y = 0; $y <= $length && $sorted_copy[$y] ne "x"; $y++)
+	{
+		print OUT_1 $href1.$sorted_copy[$y].$href2.$sorted_copy[$y]." <a/>"."<br>";		
+	}
+	print OUT_1 "</div>";
+	
+	print OUT_1 "</body>";
+	print OUT_1 "</html>";
 }
 
 #------------------------------------------------------------------------------
@@ -558,4 +545,10 @@ sub process_keywords
 		}
 		$line_no++;
 	}
+}
+
+sub usage {
+    print "\nPerl script - csv.pl\n"
+	print "\nError - both input pathname and output pathname need to be specified\n";
+	print "Usage :- perl CSV.pl <input pathname> <output pathname> \n\n";
 }

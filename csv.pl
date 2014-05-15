@@ -105,7 +105,7 @@ sub add_main_links {
 	my @words;	
 	my @source;
 	my $line_no     = 0;	
-	my $procedure   = "";
+	my $procedure   = 1;
 	my $copy_tag    = 0;
 	my $section_tag = 0;
 	my %sections;

@@ -41,7 +41,9 @@ use warnings;
 use Getopt::Long;
 use List::Compare qw / get_intersection /;
 
-# main 'control' process ...
+#------------------------------------------------------------------------------
+# main 'control' process ..
+#------------------------------------------------------------------------------
 
 {
 
@@ -90,10 +92,10 @@ sub process {
 	$source_out = $o_path."/".$input_name.'.html';
 	open(OUT_1, ">$source_out");
 
-    # process - identify 'main' section / copy / paragraph links
-	( $sections, $copys ) = add_main_links(\@infile);	
-	
-	section_copy_links();
+    # process - initial update of 'program' details, identify 'main' section / copy / paragraph links
+	( $source, $sections, $copys ) = add_main_links(\@infile);	
+	# 
+	section_copy_links( $source );
 	process_keywords();
 	build_source_list();
 	
@@ -112,10 +114,11 @@ sub add_main_links {
     
     # variables ...
 	my @words;	
-	my $line_no   = 0;	
-	my $procedure = "";
-	my $copy_tag  = 0;
-	my $section_tag   = 0;
+	my @source;
+	my $line_no     = 0;	
+	my $procedure   = "";
+	my $copy_tag    = 0;
+	my $section_tag = 0;
 	
 	foreach my $line ( @{$file} ) {
 		$line =~ s/\r|\n//g;    # remove carriage returns / line feeds
@@ -124,7 +127,8 @@ sub add_main_links {
 		
 		# blank line - just set to 'area A' - spaces 
 		if ($length_all == 0) {
-			$program[$line_no] = "        ";
+			$source[$line_no] = "        ";
+			$line_no++;
 			next;
 		}		
 		
@@ -135,17 +139,17 @@ sub add_main_links {
 		if ( $line =~ /DIVISION/i) {
 			@words = split(/ /, $area_B);
 
-            if ( $words[0] =~ /IDENTIFICATION/i ) {}
-			    $program[$line_no] = "<span class=\"div_name\"><a name=\"Id_Div\">".$line."</a></span>";
+            if ( $words[0] =~ /IDENTIFICATION/i ) {
+			    $source[$line_no] = "<span class=\"div_name\"><a name=\"Id_Div\">".$line."</a></span>";
 		    }
 			elsif( $words[0] =~ /ENVIRONMENT/i) {
-				$program[$line_no] = "<span class=\"div_name\"><a name=\"Env_Div\">".$line."</a></span>";				
+				$source[$line_no] = "<span class=\"div_name\"><a name=\"Env_Div\">".$line."</a></span>";				
 			}
 			elsif ( $words[0] =~ /DATA/i) {
-				$program[$line_no] = "<span class=\"div_name\"><a name=\"Data_Div\">".$line."</a></span>";				
+				$source[$line_no] = "<span class=\"div_name\"><a name=\"Data_Div\">".$line."</a></span>";				
 			}			
 			elsif ( $words[0] =~ /PROCEDURE/i) {
-				$program[$line_no] = "<span class=\"div_name\"><a name=\"Proc_Div\">".$line."</a></span>";
+				$source[$line_no] = "<span class=\"div_name\"><a name=\"Proc_Div\">".$line."</a></span>";
 				
 				# if I have reached the 'procedure' division then set this flag - used later ...
 				$procedure = 1; 				
@@ -160,26 +164,26 @@ sub add_main_links {
 			
 			# if this line is a comment ...
 			if (substr($area_A, 6, 1) eq '*') {
-				$program[$line_no] = "<span class=\"comments\">".$line."</span>";			
+				$source[$line_no] = "<span class=\"comments\">".$line."</span>";			
 			}	
 			else {
 			
 			    # these SECTIONs should always appear 'above' the PROCEDURE division ...
 				unless ($procedure) {
 					if ($words[0] =~ /INPUT-OUTPUT/i) {
-						$program[$line_no] = "<span class=\"section_name\"><a name=\"InOut_Sec\">".$line."</a></span>";				
+						$source[$line_no] = "<span class=\"section_name\"><a name=\"InOut_Sec\">".$line."</a></span>";				
 					}			
 					elsif ($words[0] =~ /FILE/i) {
-						$program[$line_no] = "<span class=\"section_name\"><a name=\"File_Sec\">".$line."</a></span>";				
+						$source[$line_no] = "<span class=\"section_name\"><a name=\"File_Sec\">".$line."</a></span>";				
 					}
 					elsif ($words[0] =~ /WORKING-STORAGE/i) {
-						$program[$line_no] = "<span class=\"section_name\"><a name=\"WS_Sec\">".$line."</a></span>";				
+						$source[$line_no] = "<span class=\"section_name\"><a name=\"WS_Sec\">".$line."</a></span>";				
 					}
 					elsif ($words[0] =~ /LINKAGE/i) {
-						$program[$line_no] = "<span class=\"section_name\"><a name=\"Link_Sec\">".$line."</a></span>";				
+						$source[$line_no] = "<span class=\"section_name\"><a name=\"Link_Sec\">".$line."</a></span>";				
 					}
 					elsif ($words[0] =~ /CONFIGURATION/i) {
-						$program[$line_no] = "<span class=\"section_name\"><a name=\"Conf_Sec\">".$line."</a></span>";				
+						$source[$line_no] = "<span class=\"section_name\"><a name=\"Conf_Sec\">".$line."</a></span>";				
 					}
 				}
 				
@@ -187,7 +191,7 @@ sub add_main_links {
 				else {
 					$sections{$words[0]}="#SEC$sec_tag";
 					$sections_list{$words[0]}="#SEC$sec_tag";
-					$program[$line_no] = "<a name=\"SEC$sec_tag\">".$line."</a>";
+					$source[$line_no] = "<a name=\"SEC$sec_tag\">".$line."</a>";
 				}	
 			}
 			@words=(); # reset ...
@@ -197,12 +201,12 @@ sub add_main_links {
 			$copy_tag++;
 			@words = split(/ +/, $area_B);
 			if (substr($area_A, 6, 1) eq '*') {
-				$program[$line_no] = "<span class=\"comments\">".$line."</span>";		
+				$source[$line_no] = "<span class=\"comments\">".$line."</span>";		
 			}	
 			else {
 				$words[2] =~ s/\.$//;
 				$copys{$words[2]}="#COPY$copy_tag";
-				$program[$line_no] = $line;	
+				$source[$line_no] = $line;	
 			}
 		}
 
@@ -211,114 +215,40 @@ sub add_main_links {
 		else {			
 			@words = split(/ /, $area_B);
 			if (substr($area_A, 6, 1) eq '*') {
-				$program[$line_no] = "<span class=\"comments\">".$line."</span>";			
+				$source[$line_no] = "<span class=\"comments\">".$line."</span>";			
 			}
 			elsif (substr($area_A, 6, 1) eq '/') {
-				$program[$line_no] = "<span class=\"comments\">".$line."</span>";			
+				$source[$line_no] = "<span class=\"comments\">".$line."</span>";			
 			}
 			elsif ($length_rest < 1) {    # process null lines !!!
-				$program[$line_no] = $line;
+				$source[$line_no] = $line;
 			}
 			elsif ((substr($area_B, 0, 1) ne " ") && $procedure) {
 				$sec_tag++;
 				$words[0] =~ s/\.$//;
 				$sections{$words[0]}="#SEC$sec_tag";
-				$program[$line_no] = "<a name=\"SEC$sec_tag\">".$line."</a>";
+				$source[$line_no] = "<a name=\"SEC$sec_tag\">".$line."</a>";
 			}
 			else {
-				$program[$line_no] = $line;
+				$source[$line_no] = $line;
 			}
 			@words=();
 		}
+		
+	    $line_no++;
 	}
-	$line_no++;
 
-    return ( $sections, $copys );
+    # return initial 'program' listing, section names, copy names 
+    return ( \@source, $sections, $copys );
 }	
 
 #------------------------------------------------------------------------------
-#
+# process the links for Section / Copy names / Go Tos etc ###
 #------------------------------------------------------------------------------
-sub build_source_list {
-	my $href1;
-	my $href2;
-	my @sorted_copy;
-	my @sections_keys;
-	my @sections_values;
-	my $length;
-	my $y;
-	
-	print OUT_1 "<!doctype html>";
-	print OUT_1 "<html>";
-	print OUT_1 "<head>";
-	print OUT_1 "<meta charset=\"utf-8\">";
-	print OUT_1 "<title>COBOL Source Viewer</title>";
-	print OUT_1 "<link rel=\"stylesheet\" type=\"text/css\" href=\"csv.css\">";
-	print OUT_1 "</head>";
-	print OUT_1 "<body>";
 
-	print OUT_1 "<div id=\"divisions\">";
-	print OUT_1 "<br>"."<a href=\"#Id_Div\">Identification Division</a"."<br>";
-	print OUT_1 "<br>"."<a href=\"#Env_Div\">Environment Division</a"."<br>";
-	print OUT_1 "<br>"."<a href=\"#Data_Div\">Data Division</a"."<br>";	
-	print OUT_1 "<br>"."<a href=\"#WS_Sec\">Working Storage</a"."<br>";
-	print OUT_1 "<br>"."<a href=\"#Link_Sec\">Linkage Section</a"."<br>";
-	print OUT_1 "<br>"."<a href=\"#Proc_Div\">Procedure Division</a"."<br>";
-	print OUT_1 "<br>"."<hr>";
-	print OUT_1 "</div>";
+sub section_copy_links {
+    my $source = shift;
 
-	print OUT_1 "<div id=\"code\">";
-	print OUT_1 "<pre>";	
-	$line_no = 0;
-	while ($line_no <= $no_of_lines)
-	{
-		print OUT_1 $program[$line_no]."<br>";
-		$line_no++;
-	}
-	print OUT_1 "</pre>";
-	print OUT_1 "</div>";
-
-### sort the sections list and place in html page ###
-
-	print OUT_1 "<div id=\"sections_list\">";
-	$href1 = "<a href=\"";
-	$href2 = "\">";
-	@sections_keys = keys %sections_list;
-	@sections_keys = sort(@sections_keys);
-	$length = @sections_keys;
-	$length--;
-	for ($y = 0; $y <= $length && $sections_keys[$y] ne "x"; $y++)
-	{
-		print OUT_1 $href1.$sections_list{$sections_keys[$y]}.$href2.$sections_keys[$y]." <a/>"."<br>";		
-	}
-	print OUT_1 "</div>";
-	
-### sort the copybook list and place in html page ###
-
-	print OUT_1 "<div id=\"copybooks\">";
-	$href1 = "<a href=\"".$o_path."copy/";
-	$href2 = ".html\"target=\"_blank\">";	
-	@sorted_copy = keys %copys;
-	@sorted_copy = sort(@sorted_copy);
-	$length = @sorted_copy;
-	$length--;
-	for ($y = 0; $y <= $length && $sorted_copy[$y] ne "x"; $y++)
-	{
-		print OUT_1 $href1.$sorted_copy[$y].$href2.$sorted_copy[$y]." <a/>"."<br>";		
-	}
-	print OUT_1 "</div>";
-	
-	print OUT_1 "</body>";
-	print OUT_1 "</html>";
-}
-
-#------------------------------------------------------------------------------
-#
-#------------------------------------------------------------------------------
-### process the links for Section / Copy names / Go Tos etc ###
-
-sub section_copy_links
-{
 	my $length_all;
 	my $length_rest;
 	my $pos_7;
@@ -341,9 +271,8 @@ sub section_copy_links
 	my $goto_name_len;
 	
 	$line_no = 0;
-	while ($line_no <= $no_of_lines)
-	{
-		$program[$line_no] =~ s/\s+$//;  # remove trailing spaces
+	foreach my $line ( @{$source} ) {
+		$line =~ s/\s+$//;  # remove trailing spaces
 		
 		### prepare !!! ###
 		
@@ -462,6 +391,82 @@ sub section_copy_links
 		}					
 		$line_no++;
 	}		
+}
+
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
+sub build_source_list {
+	my $href1;
+	my $href2;
+	my @sorted_copy;
+	my @sections_keys;
+	my @sections_values;
+	my $length;
+	my $y;
+	
+	print OUT_1 "<!doctype html>";
+	print OUT_1 "<html>";
+	print OUT_1 "<head>";
+	print OUT_1 "<meta charset=\"utf-8\">";
+	print OUT_1 "<title>COBOL Source Viewer</title>";
+	print OUT_1 "<link rel=\"stylesheet\" type=\"text/css\" href=\"csv.css\">";
+	print OUT_1 "</head>";
+	print OUT_1 "<body>";
+
+	print OUT_1 "<div id=\"divisions\">";
+	print OUT_1 "<br>"."<a href=\"#Id_Div\">Identification Division</a"."<br>";
+	print OUT_1 "<br>"."<a href=\"#Env_Div\">Environment Division</a"."<br>";
+	print OUT_1 "<br>"."<a href=\"#Data_Div\">Data Division</a"."<br>";	
+	print OUT_1 "<br>"."<a href=\"#WS_Sec\">Working Storage</a"."<br>";
+	print OUT_1 "<br>"."<a href=\"#Link_Sec\">Linkage Section</a"."<br>";
+	print OUT_1 "<br>"."<a href=\"#Proc_Div\">Procedure Division</a"."<br>";
+	print OUT_1 "<br>"."<hr>";
+	print OUT_1 "</div>";
+
+	print OUT_1 "<div id=\"code\">";
+	print OUT_1 "<pre>";	
+	$line_no = 0;
+	while ($line_no <= $no_of_lines)
+	{
+		print OUT_1 $program[$line_no]."<br>";
+		$line_no++;
+	}
+	print OUT_1 "</pre>";
+	print OUT_1 "</div>";
+
+### sort the sections list and place in html page ###
+
+	print OUT_1 "<div id=\"sections_list\">";
+	$href1 = "<a href=\"";
+	$href2 = "\">";
+	@sections_keys = keys %sections_list;
+	@sections_keys = sort(@sections_keys);
+	$length = @sections_keys;
+	$length--;
+	for ($y = 0; $y <= $length && $sections_keys[$y] ne "x"; $y++)
+	{
+		print OUT_1 $href1.$sections_list{$sections_keys[$y]}.$href2.$sections_keys[$y]." <a/>"."<br>";		
+	}
+	print OUT_1 "</div>";
+	
+### sort the copybook list and place in html page ###
+
+	print OUT_1 "<div id=\"copybooks\">";
+	$href1 = "<a href=\"".$o_path."copy/";
+	$href2 = ".html\"target=\"_blank\">";	
+	@sorted_copy = keys %copys;
+	@sorted_copy = sort(@sorted_copy);
+	$length = @sorted_copy;
+	$length--;
+	for ($y = 0; $y <= $length && $sorted_copy[$y] ne "x"; $y++)
+	{
+		print OUT_1 $href1.$sorted_copy[$y].$href2.$sorted_copy[$y]." <a/>"."<br>";		
+	}
+	print OUT_1 "</div>";
+	
+	print OUT_1 "</body>";
+	print OUT_1 "</html>";
 }
 
 #------------------------------------------------------------------------------

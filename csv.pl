@@ -79,7 +79,7 @@ sub process {
     # process - initial update of 'program' details, identify 'main' section / copy / paragraph links
 	my ( $source, $sections, $copys ) = add_main_links(\@infile);	
 	my $updated_source = section_copy_links( $source, $sections, $copys );
-	process_keywords();
+	my $program        = process_keywords( $updated_source );
 	build_source_list();
 	
 	print "\nProcessed file $p_file\n";
@@ -375,78 +375,75 @@ sub section_copy_links {
 #------------------------------------------------------------------------------
 #
 #------------------------------------------------------------------------------
-sub process_keywords
-{
-	my $line;
-	my $procedure;
-	my $length_all;
-	my $length_rest;
-	my $first_7;
-	my $pos_7;
-	my $the_rest;
-	my $start;
+sub process_keywords {
+	my $source = shift;
+
 	my @words;
 	my @WORDS;
-	my $lc;
-	my @intersection;
-	my $match;
+
+	my @program;
+
+	# COBOL keywords - probably not the 'definitive' list ...
 	my @keywords = ('SECTION', 'PERFORM', 'END-PERFORM', 'MOVE', 'TO', 'IF', 'END-IF', 'EVALUATE', 'END-EVALUATE',
 			'INSPECT', 'TALLYING', 'FROM', 'UNTIL', 'COMPUTE', 'FOR', 'OF', 'BY', 'INTO', 'SET', 'DISPLAY', 'CLOSE');
 		
-	$line_no = 0;
-	while ($line_no <= $no_of_lines)
-	{
-		$line = $program[$line_no];
-		$_ = $line;
-		if (/ PROCEDURE /i)
-		{
-			$procedure = 1;
-		}
-		if ($procedure)
-		{
-			if (/comments/i)
+	my $line_no = 0;
+	while ( @{$source} ) {
+
+		# check for 'keywords' in the PROCEDURE division
+		if ( /PROCEDURE/i ) {
+
+			# ignore 'comment' lines
+			if ( /comments/i )
 			{
-				;
+				$program[$line_no] = $_;
+				$line_no++;
+				next;
 			}
 			else
 			{
-				if (/GO TO/i)
+				# ignore 'GO TO' lines
+				if ( /GO TO/i )
 				{
-					;
+					$program[$line_no] = $_;
+					$line_no++;
+					next;
 				}
 				else
 				{
-					$length_all = length($line);
-					$length_rest = $length_all - 7;
-					$first_7 = substr($line, 0, 7);
-					$pos_7 = substr($line, 6, 1);
-					$the_rest = substr($line, 7, $length_rest);
-					@words = split(/ +|\./, $the_rest);
+					my ( $area_A, $area_B ) =  unpack( "(A7A65)", $_ );
+					@words = split(/ +|\./, $area_B);
 					@WORDS = map { uc } @words;
-					$lc = List::Compare->new('--unsorted', \@keywords, \@WORDS);
-					@intersection = $lc->get_intersection;
+					my $lc = List::Compare->new('--unsorted', \@keywords, \@WORDS);
+					my @intersection = $lc->get_intersection;
 			
-					foreach $match (@intersection)
-					{
-						$start = index( uc($the_rest), $match );
-						my $prefix = substr($the_rest, 0, $start);
-						my $keyword_span = "<span class=\"keyword\">";
+			 		# process 'keywords'
+			 		my $keyword_span       = "<span class=\"keyword\">";
+			 		my $keyword_span_close = "</span>";
+			 		my $line;
+					foreach my $match (@intersection) {
+						my $start = index( uc($area_B), $match );
+						my $prefix = substr($area_B, 0, $start);
+						
 						my $keyword_length = length($match);
-						my $keyword = substr($the_rest, $start, $keyword_length);
-						my $keyword_span_close = "</span>";
-						my $suffix_length = $length_rest - ($start + $keyword_length);
-						my $suffix = substr($the_rest, $start + $keyword_length, $suffix_length);
-						$line = $first_7.$prefix.$keyword_span.$keyword.$keyword_span_close.$suffix;
-						$length_all = length($line);			
-						$length_rest = $length_all - 7;
-						$the_rest = substr($line, 7, $length_rest);			
+						my $keyword        = substr($area_B, $start, $keyword_length);
+						
+						my $suffix_length = length($area_B) - ($start + $keyword_length);
+						my $suffix = substr($area_B, $start + $keyword_length, $suffix_length);
+						$line   = $area_A . $prefix . $keyword_span . $keyword . $keyword_span_close . $suffix;	
 					}
+					$program[$line_no] = $line;
+					$line_no++;
 				}
-				$program[$line_no] = $line;
+				$program[$line_no] = $_;
+				$line_no++;
 			}
 		}
+		$program[$line_no] = $_;
 		$line_no++;
 	}
+
+	return \@program;
 }
 
 #------------------------------------------------------------------------------
@@ -461,35 +458,47 @@ sub build_source_list {
 	my $length;
 	my $y;
 	
-	print OUT_1 "<!doctype html>";
-	print OUT_1 "<html>";
-	print OUT_1 "<head>";
-	print OUT_1 "<meta charset=\"utf-8\">";
-	print OUT_1 "<title>COBOL Source Viewer</title>";
-	print OUT_1 "<link rel=\"stylesheet\" type=\"text/css\" href=\"csv.css\">";
-	print OUT_1 "</head>";
-	print OUT_1 "<body>";
+	print OUT_FILE "<!DOCTYPE html>";
+	print OUT_FILE "<html>";
+	print OUT_FILE "<head>";
+	print OUT_FILE "<meta charset=\"utf-8\">";
+	print OUT_FILE "<title>COBOL Source Viewer</title>";
+	print OUT_FILE "<link rel=\"stylesheet\" type=\"text/css\" href=\"csv.css\">";
+	print OUT_FILE "</head>";
+	print OUT_FILE "<body>";
 
-	print OUT_1 "<div id=\"divisions\">";
-	print OUT_1 "<br>"."<a href=\"#Id_Div\">Identification Division</a"."<br>";
-	print OUT_1 "<br>"."<a href=\"#Env_Div\">Environment Division</a"."<br>";
-	print OUT_1 "<br>"."<a href=\"#Data_Div\">Data Division</a"."<br>";	
-	print OUT_1 "<br>"."<a href=\"#WS_Sec\">Working Storage</a"."<br>";
-	print OUT_1 "<br>"."<a href=\"#Link_Sec\">Linkage Section</a"."<br>";
-	print OUT_1 "<br>"."<a href=\"#Proc_Div\">Procedure Division</a"."<br>";
-	print OUT_1 "<br>"."<hr>";
-	print OUT_1 "</div>";
+	# bootstrap row / container structure - INDENTED TO MAKE IT EASIER TO READ
+	print OUT_FILE "<div class='row'>"
+		print OUT_FILE "<div class='container'>"
 
-	print OUT_1 "<div id=\"code\">";
-	print OUT_1 "<pre>";	
-	$line_no = 0;
-	while ($line_no <= $no_of_lines)
-	{
-		print OUT_1 $program[$line_no]."<br>";
-		$line_no++;
-	}
-	print OUT_1 "</pre>";
-	print OUT_1 "</div>";
+			# first three columns for division / section names
+			print OUT_FILE "<div class='col-md-3'>"
+
+				print OUT_FILE "<div id=\"divisions\">";
+					print OUT_FILE "<br>" . "<a href=\"#Id_Div\">Identification Division</a" . "<br>";
+					print OUT_FILE "<br>" . "<a href=\"#Env_Div\">Environment Division</a" . "<br>";
+					print OUT_FILE "<br>" . "<a href=\"#Data_Div\">Data Division</a" . "<br>";	
+					print OUT_FILE "<br>" . "<a href=\"#WS_Sec\">Working Storage</a" . "<br>";
+					print OUT_FILE "<br>" . "<a href=\"#Link_Sec\">Linkage Section</a" . "<br>";
+					print OUT_FILE "<br>" . "<a href=\"#Proc_Div\">Procedure Division</a" . "<br>";
+					print OUT_FILE "<br>" . "<hr>";
+				print OUT_FILE "</div>";
+
+			print OUT_FILE "</div>";
+			
+			# next six columns for code 
+			print OUT_FILE "<div class='col-md-6'>"	
+
+				print OUT_FILE "<div id=\"code\">";
+					print OUT_FILE "<pre>";	
+					$line_no = 0;
+					while ($line_no <= $no_of_lines) {
+						print OUT_FILE $program[$line_no]."<br>";
+						$line_no++;
+					}
+					print OUT_1 "</pre>";
+				print OUT_1 "</div>";
+			print OUT_FILE "</div>";	
 
 ### sort the sections list and place in html page ###
 

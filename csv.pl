@@ -73,14 +73,14 @@ sub process {
 	my @infile = <INFO>;
     
 	# open output files - initialize as new ...
-	my $source_out = $o_path."/".$input_name.'.html';
-	open(OUT_1, ">$source_out");
+	my $source_out = $o_path . "/" . $input_name . '.html';
+	open(OUT_FILE, ">$source_out");
 
     # process - initial update of 'program' details, identify 'main' section / copy / paragraph links
 	my ( $source, $sections, $copys ) = add_main_links(\@infile);	
-	my $updated_source = section_copy_links( $source, $sections, $copys );
-	my $program        = process_keywords( $updated_source );
-	build_source_list();
+	my $updated_source                = section_copy_links( $source, $sections, $copys );
+	my $program                       = process_keywords( $updated_source );
+	build_source_list( $program, $sections, $copys, $o_path);
 	
 	print "\nProcessed file $p_file\n";
 
@@ -450,13 +450,7 @@ sub process_keywords {
 #
 #------------------------------------------------------------------------------
 sub build_source_list {
-	my $href1;
-	my $href2;
-	my @sorted_copy;
-	my @sections_keys;
-	my @sections_values;
-	my $length;
-	my $y;
+	my ( $program, $sections_list, $copys, $o_path ) = @_;
 	
 	print OUT_FILE "<!DOCTYPE html>";
 	print OUT_FILE "<html>";
@@ -468,11 +462,11 @@ sub build_source_list {
 	print OUT_FILE "<body>";
 
 	# bootstrap row / container structure - INDENTED TO MAKE IT EASIER TO READ
-	print OUT_FILE "<div class='row'>"
-		print OUT_FILE "<div class='container'>"
+	print OUT_FILE "<div class='row'>";
+		print OUT_FILE "<div class='container'>";
 
 			# first three columns for division / section names
-			print OUT_FILE "<div class='col-md-3'>"
+			print OUT_FILE "<div class='col-md-3'>";
 
 				print OUT_FILE "<div id=\"divisions\">";
 					print OUT_FILE "<br>" . "<a href=\"#Id_Div\">Identification Division</a" . "<br>";
@@ -487,55 +481,58 @@ sub build_source_list {
 			print OUT_FILE "</div>";
 			
 			# next six columns for code 
-			print OUT_FILE "<div class='col-md-6'>"	
+			print OUT_FILE "<div class='col-md-6'>";
 
 				print OUT_FILE "<div id=\"code\">";
 					print OUT_FILE "<pre>";	
-					$line_no = 0;
-					while ($line_no <= $no_of_lines) {
-						print OUT_FILE $program[$line_no]."<br>";
-						$line_no++;
+					foreach ( @{$program} ) {
+						print OUT_FILE $_ . "<br>";
 					}
-					print OUT_1 "</pre>";
-				print OUT_1 "</div>";
+					print OUT_FILE "</pre>";
+				print OUT_FILE "</div>";
 			print OUT_FILE "</div>";	
 
-### sort the sections list and place in html page ###
+            ### sort the sections list and place in html page ###
 
-	print OUT_1 "<div id=\"sections_list\">";
-	$href1 = "<a href=\"";
-	$href2 = "\">";
-	@sections_keys = keys %sections_list;
-	@sections_keys = sort(@sections_keys);
-	$length = @sections_keys;
-	$length--;
-	for ($y = 0; $y <= $length && $sections_keys[$y] ne "x"; $y++)
-	{
-		print OUT_1 $href1.$sections_list{$sections_keys[$y]}.$href2.$sections_keys[$y]." <a/>"."<br>";		
-	}
-	print OUT_1 "</div>";
+	        print OUT_FILE "<div id=\"sections_list\">";
+
+	            my $href1 = "<a href=\"";
+	            my $href2 = "\">";
+
+	            my @sections_keys = keys %{$sections_list};
+	            @sections_keys    = sort(@sections_keys);
+
+	            foreach my $section ( @sections_keys ) {
+	        	    if ( $section eq 'x' ) {
+	        		    next;
+	        	    }
+		            print OUT_FILE $href1 . $sections_list->{$section} . $href2 . $section . " <a/>" . "<br>";		
+	            }
+	        print OUT_FILE "</div>";
 	
-### sort the copybook list and place in html page ###
+            ### sort the copybook list and place in html page ###
 
-	print OUT_1 "<div id=\"copybooks\">";
-	$href1 = "<a href=\"".$o_path."copy/";
-	$href2 = ".html\"target=\"_blank\">";	
-	@sorted_copy = keys %copys;
-	@sorted_copy = sort(@sorted_copy);
-	$length = @sorted_copy;
-	$length--;
-	for ($y = 0; $y <= $length && $sorted_copy[$y] ne "x"; $y++)
-	{
-		print OUT_1 $href1.$sorted_copy[$y].$href2.$sorted_copy[$y]." <a/>"."<br>";		
-	}
-	print OUT_1 "</div>";
+	        print OUT_FILE "<div id=\"copybooks\">";
+	            $href1 = "<a href=\"" . $o_path . "copy/";
+	            $href2 = " .html\"target=\"_blank\">";	
+
+	            my @sorted_copy = keys %{$copys};
+	            @sorted_copy    = sort(@sorted_copy);
+
+	            foreach my $copy ( @sorted_copy ) {
+	            	if ( $copy eq 'x') {
+	            		next;
+	            	}
+		            print OUT_FILE $href1 . $copys->{$copy} . $href2 . $copy . " <a/>" . "<br>";		
+	            }
+	        print OUT_1 "</div>";
 	
 	print OUT_1 "</body>";
 	print OUT_1 "</html>";
 }
 
 sub usage {
-    print "\nPerl script - csv.pl\n"
+    print "\nPerl script - csv.pl\n";
 	print "\nError - both input pathname and output pathname need to be specified\n";
 	print "Usage :- perl CSV.pl <input pathname> <output pathname> \n\n";
 }

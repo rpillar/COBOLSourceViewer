@@ -29,6 +29,9 @@ use List::Compare qw / get_intersection /;
 # main 'control' process ..
 #------------------------------------------------------------------------------
 
+# onlt 'global' - output file
+my $fh;
+
 {
 
     my $i_path;
@@ -74,7 +77,7 @@ sub process {
     
 	# open output files - initialize as new ...
 	my $source_out = $o_path . "/" . $input_name . '.html';
-	open(OUT_FILE, ">$source_out");
+	open($fh, ">$source_out");
 
     # process - initial update of 'program' details, identify 'main' section / copy / paragraph links
 	my ( $source, $sections, $copys ) = add_main_links(\@infile);	
@@ -86,7 +89,8 @@ sub process {
 
 
 	# close files
-	close (INFO);
+	close(INFO);
+	close($fh);
 }
 
 #==============================================================================
@@ -452,49 +456,49 @@ sub process_keywords {
 sub build_source_list {
 	my ( $program, $sections_list, $copys, $o_path ) = @_;
 	
-	print OUT_FILE "<!DOCTYPE html>";
-	print OUT_FILE "<html>";
-	print OUT_FILE "<head>";
-	print OUT_FILE "<meta charset=\"utf-8\">";
-	print OUT_FILE "<title>COBOL Source Viewer</title>";
-	print OUT_FILE "<link rel=\"stylesheet\" type=\"text/css\" href=\"csv.css\">";
-	print OUT_FILE "</head>";
-	print OUT_FILE "<body>";
+	print $fh "<!DOCTYPE html>";
+	print $fh "<html>";
+	print $fh "<head>";
+	print $fh "<meta charset=\"utf-8\">";
+	print $fh "<title>COBOL Source Viewer</title>";
+	print $fh "<link rel=\"stylesheet\" type=\"text/css\" href=\"csv.css\">";
+	print $fh "</head>";
+	print $fh "<body>";
 
 	# bootstrap row / container structure - INDENTED TO MAKE IT EASIER TO READ
-	print OUT_FILE "<div class='row'>";
-		print OUT_FILE "<div class='container'>";
+	print $fh "<div class='row'>";
+		print $fh "<div class='container'>";
 
 			# first three columns for division / section names
-			print OUT_FILE "<div class='col-md-3'>";
+			print $fh "<div class='col-md-3'>";
 
-				print OUT_FILE "<div id=\"divisions\">";
-					print OUT_FILE "<br>" . "<a href=\"#Id_Div\">Identification Division</a" . "<br>";
-					print OUT_FILE "<br>" . "<a href=\"#Env_Div\">Environment Division</a" . "<br>";
-					print OUT_FILE "<br>" . "<a href=\"#Data_Div\">Data Division</a" . "<br>";	
-					print OUT_FILE "<br>" . "<a href=\"#WS_Sec\">Working Storage</a" . "<br>";
-					print OUT_FILE "<br>" . "<a href=\"#Link_Sec\">Linkage Section</a" . "<br>";
-					print OUT_FILE "<br>" . "<a href=\"#Proc_Div\">Procedure Division</a" . "<br>";
-					print OUT_FILE "<br>" . "<hr>";
-				print OUT_FILE "</div>";
+				print $fh "<div id=\"divisions\">";
+					print $fh "<br>" . "<a href=\"#Id_Div\">Identification Division</a" . "<br>";
+					print $fh "<br>" . "<a href=\"#Env_Div\">Environment Division</a" . "<br>";
+					print $fh "<br>" . "<a href=\"#Data_Div\">Data Division</a" . "<br>";	
+					print $fh "<br>" . "<a href=\"#WS_Sec\">Working Storage</a" . "<br>";
+					print $fh "<br>" . "<a href=\"#Link_Sec\">Linkage Section</a" . "<br>";
+					print $fh "<br>" . "<a href=\"#Proc_Div\">Procedure Division</a" . "<br>";
+					print $fh "<br>" . "<hr>";
+				print $fh "</div>";
 
-			print OUT_FILE "</div>";
+			print $fh "</div>";
 			
 			# next six columns for code 
-			print OUT_FILE "<div class='col-md-6'>";
+			print $fh "<div class='col-md-6'>";
 
-				print OUT_FILE "<div id=\"code\">";
-					print OUT_FILE "<pre>";	
+				print $fh "<div id=\"code\">";
+					print $fh "<pre>";	
 					foreach ( @{$program} ) {
-						print OUT_FILE $_ . "<br>";
+						print $fh $_ . "<br>";
 					}
-					print OUT_FILE "</pre>";
-				print OUT_FILE "</div>";
-			print OUT_FILE "</div>";	
+					print $fh "</pre>";
+				print $fh "</div>";
+			print $fh "</div>";	
 
             ### sort the sections list and place in html page ###
 
-	        print OUT_FILE "<div id=\"sections_list\">";
+	        print $fh "<div id=\"sections_list\">";
 
 	            my $href1 = "<a href=\"";
 	            my $href2 = "\">";
@@ -506,13 +510,13 @@ sub build_source_list {
 	        	    if ( $section eq 'x' ) {
 	        		    next;
 	        	    }
-		            print OUT_FILE $href1 . $sections_list->{$section} . $href2 . $section . " <a/>" . "<br>";		
+		            print $fh $href1 . $sections_list->{$section} . $href2 . $section . " <a/>" . "<br>";		
 	            }
-	        print OUT_FILE "</div>";
+	        print $fh "</div>";
 	
             ### sort the copybook list and place in html page ###
 
-	        print OUT_FILE "<div id=\"copybooks\">";
+	        print $fh "<div id=\"copybooks\">";
 	            $href1 = "<a href=\"" . $o_path . "copy/";
 	            $href2 = " .html\"target=\"_blank\">";	
 
@@ -523,12 +527,12 @@ sub build_source_list {
 	            	if ( $copy eq 'x') {
 	            		next;
 	            	}
-		            print OUT_FILE $href1 . $copys->{$copy} . $href2 . $copy . " <a/>" . "<br>";		
+		            print $fh $href1 . $copys->{$copy} . $href2 . $copy . " <a/>" . "<br>";		
 	            }
-	        print OUT_1 "</div>";
+	        print $fh "</div>";
 	
-	print OUT_1 "</body>";
-	print OUT_1 "</html>";
+	print $fh "</body>";
+	print $fh "</html>";
 }
 
 sub usage {

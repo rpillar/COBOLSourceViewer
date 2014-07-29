@@ -22,6 +22,8 @@ rpillar - <http://developontheweb.co.uk/>
 use strict;
 use warnings;
 
+use feature 'switch';
+
 use Getopt::Long;
 use List::Compare qw / get_intersection /;
 
@@ -130,22 +132,24 @@ sub add_main_links {
         ### process 'DIVISION' statements ###		
 		if ( $line =~ /DIVISION/i) {
 			@words = split(/ /, $area_B);
-
-            if ( $words[0] =~ /IDENTIFICATION/i ) {
-			    $source[$line_no] = "<span class=\"div_name\"><a name=\"Id_Div\">".$line."</a></span>";
-		    }
-			elsif( $words[0] =~ /ENVIRONMENT/i) {
-				$source[$line_no] = "<span class=\"div_name\"><a name=\"Env_Div\">".$line."</a></span>";				
-			}
-			elsif ( $words[0] =~ /DATA/i) {
-				$source[$line_no] = "<span class=\"div_name\"><a name=\"Data_Div\">".$line."</a></span>";				
-			}			
-			elsif ( $words[0] =~ /PROCEDURE/i) {
-				$source[$line_no] = "<span class=\"div_name\"><a name=\"Proc_Div\">".$line."</a></span>";
+            
+			given ( $words[0] ) {
+                when (/IDENTIFICATION/i ) {
+			        $source[$line_no] = "<span class=\"div_name\"><a name=\"Id_Div\">".$line."</a></span>";
+		        }
+			    when ( /ENVIRONMENT/i) {
+				    $source[$line_no] = "<span class=\"div_name\"><a name=\"Env_Div\">".$line."</a></span>";				
+			    }
+			    when ( /DATA/i) {
+				    $source[$line_no] = "<span class=\"div_name\"><a name=\"Data_Div\">".$line."</a></span>";				
+			    }			
+			    when ( /PROCEDURE/i) {
+				    $source[$line_no] = "<span class=\"div_name\"><a name=\"Proc_Div\">".$line."</a></span>";
 				
-				# if I have reached the 'procedure' division then set this flag - used later ...
-				$procedure = 1; 				
-			}			
+				    # if I have reached the 'procedure' division then set this flag - used later ...
+			 	    $procedure = 1; 				
+			    }
+		}	
 			@words=(); # reset ...
 		}
 		
@@ -162,22 +166,24 @@ sub add_main_links {
 			
 			    # these SECTIONs should always appear 'above' the PROCEDURE division ...
 				unless ($procedure) {
-					if ($words[0] =~ /INPUT-OUTPUT/i) {
-						$source[$line_no] = "<span class=\"section_name\"><a name=\"InOut_Sec\">".$line."</a></span>";				
-					}			
-					elsif ($words[0] =~ /FILE/i) {
-						$source[$line_no] = "<span class=\"section_name\"><a name=\"File_Sec\">".$line."</a></span>";				
-					}
-					elsif ($words[0] =~ /WORKING-STORAGE/i) {
-						$source[$line_no] = "<span class=\"section_name\"><a name=\"WS_Sec\">".$line."</a></span>";				
-					}
-					elsif ($words[0] =~ /LINKAGE/i) {
-						$source[$line_no] = "<span class=\"section_name\"><a name=\"Link_Sec\">".$line."</a></span>";				
-					}
-					elsif ($words[0] =~ /CONFIGURATION/i) {
-						$source[$line_no] = "<span class=\"section_name\"><a name=\"Conf_Sec\">".$line."</a></span>";				
-					}
-				}
+					given ( $words[0] ) {	
+					    when ( /INPUT-OUTPUT/i ) {
+						    $source[$line_no] = "<span class=\"section_name\"><a name=\"InOut_Sec\">".$line."</a></span>";				
+					    }			
+					    when ( /FILE/i ) {
+						    $source[$line_no] = "<span class=\"section_name\"><a name=\"File_Sec\">".$line."</a></span>";				
+					    }
+					    when ( /WORKING-STORAGE/i ) {
+						    $source[$line_no] = "<span class=\"section_name\"><a name=\"WS_Sec\">".$line."</a></span>";				
+					    }
+					    when ( /LINKAGE/i ) {
+						    $source[$line_no] = "<span class=\"section_name\"><a name=\"Link_Sec\">".$line."</a></span>";				
+					    }
+					    when ( /CONFIGURATION/i ) {
+						    $source[$line_no] = "<span class=\"section_name\"><a name=\"Conf_Sec\">".$line."</a></span>";				
+					    }
+				    }
+			    }
 				
 				# store 'sections' and add a named 'link' ...
 				else {
@@ -187,7 +193,8 @@ sub add_main_links {
 				}	
 			}
 			@words=(); # reset ...
-		}
+		} 
+
 	    ### process 'COPY' names ###
 		elsif(/ COPY /i) {
 			$copy_tag++;

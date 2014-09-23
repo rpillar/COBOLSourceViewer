@@ -11,7 +11,7 @@ Wrap COBOL source files in HTML tags
 
 =head1 AUTHOR
 
-rpillar - <http://developontheweb.co.uk/>
+rpillar - <http://www.developontheweb.co.uk/>
 
 =head1 SEE ALSO
 
@@ -31,9 +31,7 @@ use List::Compare qw / get_intersection /;
 # main 'control' process ..
 #------------------------------------------------------------------------------
 
-# onlt 'global' - output file
-my $fh;
-
+# get command line options and process all files in the specified directory
 {
 
     my $i_path;
@@ -50,8 +48,14 @@ my $fh;
 	
 	# process all files in the 'input' folder ...	
 	while( defined (my $file = readdir BIN) ) {
-		if (-T $file) {
-			process ($i_path, $file, $o_path)
+
+		# only process files with an extension of 'cbl / CBL'. 	
+		if ( $file =~ /\.cbl$/i ) {	
+		    print "Processing file : $file\n";	
+			process ($i_path, $file, $o_path);
+		}
+		else {
+			print "File : $file - ignored\n";	
 		}
 	}
 	closedir(BIN);
@@ -64,35 +68,33 @@ my $fh;
 sub process {
 	my ($i_path, $p_file, $o_path) = @_;
 
-	print "\nProcessing file $p_file\n";
 	my $input_name = $p_file;  
 	$input_name =~ s/i\.txt$|\.cbl$|\.CBL$//;  # remove trailing file extension - 'txt/cbl/CBL'
 	
 	my $fullname = $i_path . $p_file;
 
-	if (!open(INFO, $fullname)) {
+	if (!open(INFO, "<", $fullname)) {
 		die "\nCould not open file : $fullname. Program stopped\n\n";
 	}	
 	
 	# input file
 	my @infile = <INFO>;
     
+    # process - initial update of 'program' details, identify 'main' section / copy / paragraph links
+	my ( $source1, $sections, $copys ) = add_main_links(\@infile);	
+	my $source2                        = section_copy_links( $source1, $sections, $copys );
+	my $source3                        = process_keywords( $source2 );
+
 	# open output files - initialize as new ...
 	my $source_out = $o_path . "/" . $input_name . '.html';
-	open($fh, ">$source_out");
 
-    # process - initial update of 'program' details, identify 'main' section / copy / paragraph links
-	my ( $source, $sections, $copys ) = add_main_links(\@infile);	
-	my $updated_source                = section_copy_links( $source, $sections, $copys );
-	my $program                       = process_keywords( $updated_source );
-	build_source_list( $program, $sections, $copys, $o_path);
+	build_source_list( $source_out, $source3, $sections, $copys, $o_path);
 	
-	print "\nProcessed file $p_file\n";
+	print "\nProcessed file : $p_file\n";
 
 
 	# close files
 	close(INFO);
-	close($fh);
 }
 
 #==============================================================================
@@ -117,7 +119,7 @@ sub add_main_links {
 	my %sections;
 	my %sections_list;
 	my %copys;
-	
+    
 	foreach my $line ( @{$file} ) {
 		$line =~ s/\r|\n//g;    # remove carriage returns / line feeds
 		chomp $line;            # just in case !!!
@@ -153,12 +155,12 @@ sub add_main_links {
 				    # if I have reached the 'procedure' division then set this flag - used later ...
 			 	    $procedure = 1; 				
 			    }
-		}	
+		    }	
 			@words=(); # reset ...
 		}
 		
         ### process 'SECTION' names ###
-		elsif(/\sSECTION[.]/i) {
+		elsif( $line =~ /\sSECTION[.]/i) {
 			$section_tag++;
 			@words = split(/\s/, $area_B);
 			
@@ -200,7 +202,7 @@ sub add_main_links {
 		} 
 
 	    ### process 'COPY' names ###
-		elsif(/ COPY /i) {
+		elsif( $line =~ / COPY /i) {
 			$copy_tag++;
 			@words = split(/ +/, $area_B);
 			if (substr($area_A, 6, 1) eq '*') {
@@ -223,11 +225,17 @@ sub add_main_links {
 			elsif (substr($area_A, 6, 1) eq '/') {
 				$source[$line_no] = "<span class=\"comments\">".$line."</span>";			
 			}
-			elsif ((substr($area_B, 0, 1) ne " ") && $procedure) {
-				$section_tag++;
-				$words[0]            =~ s/\.$//;
-				$sections{$words[0]} = "#SEC$section_tag";
-				$source[$line_no]    = "<a name=\"SEC$section_tag\">".$line."</a>";
+			@words = split(/ /, $area_B);
+			if ( @words ) {
+			    if ( (substr($area_B, 0, 1) ne " ") && $procedure) {
+				    $section_tag++;
+				    $words[0]            =~ s/\.$//;
+				    $sections{$words[0]} = "#SEC$section_tag";
+				    $source[$line_no]    = "<a name=\"SEC$section_tag\">".$line."</a>";
+			    }	
+			    else {
+				    $source[$line_no] = $line;
+			    }
 			}
 			else {
 				$source[$line_no] = $line;
@@ -252,6 +260,8 @@ sub section_copy_links {
 	my $line_no = 0;
 	foreach my $line ( @{$source} ) {
 
+print "DEBUG - output : ' . $line" . "\n";
+
 		# split 'line' - area 'A' / 'B' (assumes margings at 8 and 72) - not strictly true from a COBOL perspective but ...
 		my ( $area_A, $area_B ) =  unpack("(A7A65)",$line);
 		
@@ -262,8 +272,13 @@ sub section_copy_links {
 		}
 		
         ### process 'PERFORM' statements - add links to enable navigation to the appropriate 'section' ###	
-		if ( $area_B =~ /\sPERFORM/i)
-		{
+		unless ( $area_B ) {
+			next;	
+		}
+
+		if ( $area_B =~ /\sPERFORM/i) {
+			print "Area B - line : $line\n";
+			print "Area B - content : $area_B\n";
 			my @words = split(/ +/, $area_B);
 			
 			# remove 'period' at end of SECTION name (if it exists)
@@ -301,8 +316,7 @@ sub section_copy_links {
 		
         ### process 'COPY' statements ###
 		
-		if (/COPY /i)
-		{
+		if ( $area_B =~ /COPY /i) {
 			my @words = split(/ +/, $area_B);
 
 			# remove 'period' at end of COPY name (if it exists)
@@ -340,8 +354,7 @@ sub section_copy_links {
 		
         ### process 'GO TO' statements ###
 		
-		if (/GO TO/i)
-		{
+		if ( $area_B =~ /GO TO/i) {
 			my @words = split(/ +/, $area_B);
 			
 			# remove 'period' at end of GO TO name (if it exists)
@@ -399,7 +412,7 @@ sub process_keywords {
 			'INSPECT', 'TALLYING', 'FROM', 'UNTIL', 'COMPUTE', 'FOR', 'OF', 'BY', 'INTO', 'SET', 'DISPLAY', 'CLOSE');
 		
 	my $line_no = 0;
-	while ( @{$source} ) {
+	foreach ( @{$source} ) {
 
 		# check for 'keywords' in the PROCEDURE division
 		if ( /PROCEDURE/i ) {
@@ -461,51 +474,58 @@ sub process_keywords {
 #
 #------------------------------------------------------------------------------
 sub build_source_list {
-	my ( $program, $sections_list, $copys, $o_path ) = @_;
-	
-	print $fh "<!DOCTYPE html>";
-	print $fh "<html>";
-	print $fh "<head>";
-	print $fh "<meta charset=\"utf-8\">";
-	print $fh "<title>COBOL Source Viewer</title>";
-	print $fh "<link rel=\"stylesheet\" type=\"text/css\" href=\"csv.css\">";
-	print $fh "</head>";
-	print $fh "<body>";
+	my ( $file_out, $program, $sections_list, $copys, $o_path ) = @_;
+
+	if ( !open(OUT, ">", $file_out) ) {
+		print "Unable to open output file : $file_out -  exit !!!\n";	
+		exit;
+	}
+
+	print "DEBUG1 : - opening file $file_out \n"; 
+	print OUT "<!DOCTYPE html>";
+	print "DEBUG2 : - attempting to build final source list \n"; 
+	print OUT "<html>";
+	print OUT "<head>";
+	print OUT "<meta charset=\"utf-8\">";
+	print OUT "<title>COBOL Source Viewer</title>";
+	print OUT "<link rel=\"stylesheet\" type=\"text/css\" href=\"csv.css\">";
+	print OUT "</head>";
+	print OUT "<body>";
 
 	# bootstrap row / container structure - INDENTED TO MAKE IT EASIER TO READ
-	print $fh "<div class='row'>";
-		print $fh "<div class='container'>";
+	print OUT "<div class='row'>";
+		print OUT "<div class='container'>";
 
 			# first three columns for division / section names
-			print $fh "<div class='col-md-3'>";
+			print OUT "<div class='col-md-3'>";
 
-				print $fh "<div id=\"divisions\">";
-					print $fh "<br>" . "<a href=\"#Id_Div\">Identification Division</a" . "<br>";
-					print $fh "<br>" . "<a href=\"#Env_Div\">Environment Division</a" . "<br>";
-					print $fh "<br>" . "<a href=\"#Data_Div\">Data Division</a" . "<br>";	
-					print $fh "<br>" . "<a href=\"#WS_Sec\">Working Storage</a" . "<br>";
-					print $fh "<br>" . "<a href=\"#Link_Sec\">Linkage Section</a" . "<br>";
-					print $fh "<br>" . "<a href=\"#Proc_Div\">Procedure Division</a" . "<br>";
-					print $fh "<br>" . "<hr>";
-				print $fh "</div>";
+				print OUT "<div id=\"divisions\">";
+					print OUT "<br>" . "<a href=\"#Id_Div\">Identification Division</a" . "<br>";
+					print OUT "<br>" . "<a href=\"#Env_Div\">Environment Division</a" . "<br>";
+					print OUT "<br>" . "<a href=\"#Data_Div\">Data Division</a" . "<br>";	
+					print OUT "<br>" . "<a href=\"#WS_Sec\">Working Storage</a" . "<br>";
+					print OUT "<br>" . "<a href=\"#Link_Sec\">Linkage Section</a" . "<br>";
+					print OUT "<br>" . "<a href=\"#Proc_Div\">Procedure Division</a" . "<br>";
+					print OUT "<br>" . "<hr>";
+				print OUT "</div>";
 
-			print $fh "</div>";
+			print OUT "</div>";
 			
 			# next six columns for code 
-			print $fh "<div class='col-md-6'>";
+			print OUT "<div class='col-md-6'>";
 
-				print $fh "<div id=\"code\">";
-					print $fh "<pre>";	
+				print OUT "<div id=\"code\">";
+					print OUT "<pre>";	
 					foreach ( @{$program} ) {
-						print $fh $_ . "<br>";
+						print OUT $_ . "<br>";
 					}
-					print $fh "</pre>";
-				print $fh "</div>";
-			print $fh "</div>";	
+					print OUT "</pre>";
+				print OUT "</div>";
+			print OUT "</div>";	
 
             ### sort the sections list and place in html page ###
 
-	        print $fh "<div id=\"sections_list\">";
+	        print OUT "<div id=\"sections_list\">";
 
 	            my $href1 = "<a href=\"";
 	            my $href2 = "\">";
@@ -517,13 +537,13 @@ sub build_source_list {
 	        	    if ( $section eq 'x' ) {
 	        		    next;
 	        	    }
-		            print $fh $href1 . $sections_list->{$section} . $href2 . $section . " <a/>" . "<br>";		
+		            print OUT $href1 . $sections_list->{$section} . $href2 . $section . " <a/>" . "<br>";		
 	            }
-	        print $fh "</div>";
+	        print OUT "</div>";
 	
             ### sort the copybook list and place in html page ###
 
-	        print $fh "<div id=\"copybooks\">";
+	        print OUT "<div id=\"copybooks\">";
 	            $href1 = "<a href=\"" . $o_path . "copy/";
 	            $href2 = " .html\"target=\"_blank\">";	
 
@@ -534,12 +554,12 @@ sub build_source_list {
 	            	if ( $copy eq 'x') {
 	            		next;
 	            	}
-		            print $fh $href1 . $copys->{$copy} . $href2 . $copy . " <a/>" . "<br>";		
+		            print OUT $href1 . $copys->{$copy} . $href2 . $copy . " <a/>" . "<br>";		
 	            }
-	        print $fh "</div>";
+	        print OUT "</div>";
 	
-	print $fh "</body>";
-	print $fh "</html>";
+	print OUT "</body>";
+	print OUT "</html>";
 }
 
 sub usage {

@@ -65,6 +65,7 @@ use List::Compare qw / get_intersection /;
 #------------------------------------------------------------------------------
 # Process the specified file
 #------------------------------------------------------------------------------
+
 sub process {
 	my ($i_path, $p_file, $o_path) = @_;
 
@@ -97,15 +98,10 @@ sub process {
 	close(INFO);
 }
 
-#==============================================================================
+#------------------------------------------------------------------------------
+# add the 'main' links - DIVISION / SECTION etc.
+#------------------------------------------------------------------------------
 
-=head3 NAME
-
-add_main_links
-
-=cut
-
-#==============================================================================
 sub add_main_links {
     my $file = shift;
     
@@ -262,11 +258,8 @@ sub section_copy_links {
 
 print "DEBUG - output : ' . $line" . "\n";
 
-		# split 'line' - area 'A' / 'B' (assumes margings at 8 and 72) - not strictly true from a COBOL perspective but ...
-		my ( $area_A, $area_B ) =  unpack("(A7A65)",$line);
-		
 		### ignore 'comment' lines
-		if (substr($area_A, 6, 1) eq '*') {
+		if ( (substr($line, 6, 1) eq '*') || $line =~ /'comments'/  ) {
 			$line_no++;
 			next;
 		}
@@ -276,9 +269,7 @@ print "DEBUG - output : ' . $line" . "\n";
 			next;	
 		}
 
-		if ( $area_B =~ /\sPERFORM/i) {
-			print "Area B - line : $line\n";
-			print "Area B - content : $area_B\n";
+		if ( $line =~ /\sPERFORM/i) {
 			my @words = split(/ +/, $area_B);
 			
 			# remove 'period' at end of SECTION name (if it exists)

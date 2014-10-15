@@ -265,10 +265,6 @@ print "DEBUG - output : ' . $line" . "\n";
 		}
 		
         ### process 'PERFORM' statements - add links to enable navigation to the appropriate 'section' ###	
-		unless ( $area_B ) {
-			next;	
-		}
-
 		if ( $line =~ /\sPERFORM/i) {
 			my @words = split(/ +/, $area_B);
 			

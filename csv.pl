@@ -19,10 +19,12 @@ rpillar - <http://www.developontheweb.co.uk/>
 
 #!/usr/bin/perl;
 
+use 5.018;
+
 use strict;
 use warnings;
 
-use feature 'switch';
+#use feature 'switch';
 
 use Getopt::Long;
 use List::Compare qw / get_intersection /;
@@ -83,13 +85,13 @@ sub process {
     
     # process - initial update of 'program' details, identify 'main' section / copy / paragraph links
 	my ( $source1, $sections, $copys ) = add_main_links(\@infile);	
-	my $source2                        = section_copy_links( $source1, $sections, $copys );
-	my $source3                        = process_keywords( $source2 );
+	#my $source2                        = section_copy_links( $source1, $sections, $copys );
+	#my $source3                        = process_keywords( $source2 );
 
 	# open output files - initialize as new ...
 	my $source_out = $o_path . "/" . $input_name . '.html';
 
-	build_source_list( $source_out, $source3, $sections, $copys, $o_path);
+	#build_source_list( $source_out, $source3, $sections, $copys, $o_path);
 	
 	print "\nProcessed file : $p_file\n";
 
@@ -109,7 +111,7 @@ sub add_main_links {
 	my @words;	
 	my @source;
 	my $line_no     = 0;	
-	my $procedure   = 1;
+	my $procedure   = 0;
 	my $copy_tag    = 0;
 	my $section_tag = 0;
 	my %sections;
@@ -120,7 +122,9 @@ sub add_main_links {
 		$line =~ s/\r|\n//g;    # remove carriage returns / line feeds
 		chomp $line;            # just in case !!!
 		my $length_all = length($line);
-		
+
+		print "current line (1) : $line \n";
+
 		# blank line - just set to 'area A' - spaces 
 		if ( $length_all == 0 ) {
 			$source[$line_no] = "        ";
@@ -131,8 +135,18 @@ sub add_main_links {
 		# split 'line' - area 'A' / 'B' (assumes margings at 8 and 72) - not strictly true from a COBOL perspective but ...
 		my ( $area_A, $area_B ) =  unpack("(A7A65)",$line);
 		
+		# process 'comment' / 'break' lines first ...
+		if (substr($area_A, 6, 1) eq '*') {
+			$source[$line_no] = "<span class=\"comments\">".$line."</span>";
+			print "This line is a comment ...\n";
+		}
+		elsif (substr($area_A, 6, 1) eq '/') {
+			$source[$line_no] = "<span class=\"comments\">".$line."</span>";			
+			print "This line is a break ...\n";
+		}
+
         ### process 'DIVISION' statements ###		
-		if ( $line =~ /DIVISION/i) {
+		elsif ( $line =~ /DIVISION/i) {
 			@words = split(/ /, $area_B);
             
 			given ( $words[0] ) {
@@ -149,6 +163,7 @@ sub add_main_links {
 				    $source[$line_no] = "<span class=\"div_name\"><a name=\"Proc_Div\">".$line."</a></span>";
 				
 				    # if I have reached the 'procedure' division then set this flag - used later ...
+					print "set procedure div flag ...\n"; 
 			 	    $procedure = 1; 				
 			    }
 		    }	
@@ -160,40 +175,34 @@ sub add_main_links {
 			$section_tag++;
 			@words = split(/\s/, $area_B);
 			
-			# if this line is a comment ...
-			if (substr($area_A, 6, 1) eq '*') {
-				$source[$line_no] = "<span class=\"comments\">".$line."</span>";			
-			}	
-			else {
-			
-			    # these SECTIONs should always appear 'above' the PROCEDURE division ...
-				unless ($procedure) {
-					given ( $words[0] ) {	
-					    when ( /INPUT-OUTPUT/i ) {
-						    $source[$line_no] = "<span class=\"section_name\"><a name=\"InOut_Sec\">".$line."</a></span>";				
-					    }			
-					    when ( /FILE/i ) {
-						    $source[$line_no] = "<span class=\"section_name\"><a name=\"File_Sec\">".$line."</a></span>";				
-					    }
-					    when ( /WORKING-STORAGE/i ) {
-						    $source[$line_no] = "<span class=\"section_name\"><a name=\"WS_Sec\">".$line."</a></span>";				
-					    }
-					    when ( /LINKAGE/i ) {
-						    $source[$line_no] = "<span class=\"section_name\"><a name=\"Link_Sec\">".$line."</a></span>";				
-					    }
-					    when ( /CONFIGURATION/i ) {
-						    $source[$line_no] = "<span class=\"section_name\"><a name=\"Conf_Sec\">".$line."</a></span>";				
-					    }
+			# these SECTIONs should always appear 'above' the PROCEDURE division ...
+			unless ($procedure) {
+				given ( $words[0] ) {	
+				    when ( /INPUT-OUTPUT/i ) {
+					    $source[$line_no] = "<span class=\"section_name\"><a name=\"InOut_Sec\">".$line."</a></span>";				
+				    }			
+				    when ( /FILE/i ) {
+					    $source[$line_no] = "<span class=\"section_name\"><a name=\"File_Sec\">".$line."</a></span>";				
+				    }
+				    when ( /WORKING-STORAGE/i ) {
+					    $source[$line_no] = "<span class=\"section_name\"><a name=\"WS_Sec\">".$line."</a></span>";				
+				    }
+				    when ( /LINKAGE/i ) {
+					    $source[$line_no] = "<span class=\"section_name\"><a name=\"Link_Sec\">".$line."</a></span>";				
+				    }
+				    when ( /CONFIGURATION/i ) {
+					    $source[$line_no] = "<span class=\"section_name\"><a name=\"Conf_Sec\">".$line."</a></span>";				
 				    }
 			    }
-				
-				# store 'sections' and add a named 'link' ...
-				else {
-					$sections{$words[0]}      = "#SEC$section_tag";
-					$sections_list{$words[0]} = "#SEC$section_tag";
-					$source[$line_no]         = "<a name=\"SEC$section_tag\">".$line."</a>";
-				}	
 			}
+				
+			# store 'sections' and add a named 'link' ...
+			else {
+				print "add a named-link ...\n";	
+				$sections{$words[0]}      = "#SEC$section_tag";
+				$sections_list{$words[0]} = "#SEC$section_tag";
+				$source[$line_no]         = "<a name=\"SEC$section_tag\">".$line."</a>";
+			}	
 			@words=(); # reset ...
 		} 
 
@@ -201,29 +210,19 @@ sub add_main_links {
 		elsif( $line =~ / COPY /i) {
 			$copy_tag++;
 			@words = split(/ +/, $area_B);
-			if (substr($area_A, 6, 1) eq '*') {
-				$source[$line_no] = "<span class=\"comments\">".$line."</span>";		
-			}	
-			else {
-				$words[2] =~ s/\.$//;
-				$copys{$words[2]}="#COPY$copy_tag";
-				$source[$line_no] = $line;	
-			}
+			
+			$words[2] =~ s/\.$//;
+			$copys{$words[2]}="#COPY$copy_tag";
+			$source[$line_no] = $line;	
 		}
 
         ### process other 'names' that start in position 8 - 'PARAGRAPH' names ###	
 
 		else {			
 			@words = split(/ /, $area_B);
-			if (substr($area_A, 6, 1) eq '*') {
-				$source[$line_no] = "<span class=\"comments\">".$line."</span>";			
-			}
-			elsif (substr($area_A, 6, 1) eq '/') {
-				$source[$line_no] = "<span class=\"comments\">".$line."</span>";			
-			}
-			@words = split(/ /, $area_B);
 			if ( @words ) {
 			    if ( (substr($area_B, 0, 1) ne " ") && $procedure) {
+				print "add a procedure-link ...\n";	
 				    $section_tag++;
 				    $words[0]            =~ s/\.$//;
 				    $sections{$words[0]} = "#SEC$section_tag";
@@ -239,6 +238,7 @@ sub add_main_links {
 			@words=();
 		}
 		
+		print "current line (2) : $source[$line_no] \n";
 	    $line_no++;
 	}
 
@@ -264,6 +264,8 @@ print "DEBUG - output : ' . $line" . "\n";
 			next;
 		}
 		
+		my ( $area_A, $area_B ) =  unpack("(A7A65)",$line);
+
         ### process 'PERFORM' statements - add links to enable navigation to the appropriate 'section' ###	
 		if ( $line =~ /\sPERFORM/i) {
 			my @words = split(/ +/, $area_B);
@@ -549,6 +551,9 @@ sub build_source_list {
 	print OUT "</html>";
 }
 
+#------------------------------------------------------------------------------
+# usage.
+#------------------------------------------------------------------------------
 sub usage {
     print "\nPerl script - csv.pl\n";
 	print "\nError - both input pathname and output pathname need to be specified\n";

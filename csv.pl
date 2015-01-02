@@ -26,6 +26,7 @@ use warnings;
 
 #use feature 'switch';
 
+use Data::Dumper;
 use Getopt::Long;
 use List::Compare qw / get_intersection /;
 
@@ -85,13 +86,13 @@ sub process {
     
     # process - initial update of 'program' details, identify 'main' section / copy / paragraph links
 	my ( $source1, $sections, $copys ) = add_main_links(\@infile);	
-	#my $source2                        = section_copy_links( $source1, $sections, $copys );
-	#my $source3                        = process_keywords( $source2 );
+	my $source2                        = section_copy_links( $source1, $sections, $copys );
+	my $source3                        = process_keywords( $source2 );
 
 	# open output files - initialize as new ...
 	my $source_out = $o_path . "/" . $input_name . '.html';
 
-	#build_source_list( $source_out, $source3, $sections, $copys, $o_path);
+	build_source_list( $source_out, $source3, $sections, $copys, $o_path);
 	
 	print "\nProcessed file : $p_file\n";
 
@@ -115,15 +116,12 @@ sub add_main_links {
 	my $copy_tag    = 0;
 	my $section_tag = 0;
 	my %sections;
-	my %sections_list;
 	my %copys;
     
 	foreach my $line ( @{$file} ) {
 		$line =~ s/\r|\n//g;    # remove carriage returns / line feeds
 		chomp $line;            # just in case !!!
 		my $length_all = length($line);
-
-		print "current line (1) : $line \n";
 
 		# blank line - just set to 'area A' - spaces 
 		if ( $length_all == 0 ) {
@@ -137,12 +135,10 @@ sub add_main_links {
 		
 		# process 'comment' / 'break' lines first ...
 		if (substr($area_A, 6, 1) eq '*') {
-			$source[$line_no] = "<span class=\"comments\">".$line."</span>";
-			print "This line is a comment ...\n";
+			$source[$line_no] = "<span class=\"comment\">".$line."</span>";
 		}
 		elsif (substr($area_A, 6, 1) eq '/') {
-			$source[$line_no] = "<span class=\"comments\">".$line."</span>";			
-			print "This line is a break ...\n";
+			$source[$line_no] = "<span class=\"break\">".$line."</span>";			
 		}
 
         ### process 'DIVISION' statements ###		
@@ -163,7 +159,6 @@ sub add_main_links {
 				    $source[$line_no] = "<span class=\"div_name\"><a name=\"Proc_Div\">".$line."</a></span>";
 				
 				    # if I have reached the 'procedure' division then set this flag - used later ...
-					print "set procedure div flag ...\n"; 
 			 	    $procedure = 1; 				
 			    }
 		    }	
@@ -198,9 +193,7 @@ sub add_main_links {
 				
 			# store 'sections' and add a named 'link' ...
 			else {
-				print "add a named-link ...\n";	
 				$sections{$words[0]}      = "#SEC$section_tag";
-				$sections_list{$words[0]} = "#SEC$section_tag";
 				$source[$line_no]         = "<a name=\"SEC$section_tag\">".$line."</a>";
 			}	
 			@words=(); # reset ...
@@ -222,11 +215,11 @@ sub add_main_links {
 			@words = split(/ /, $area_B);
 			if ( @words ) {
 			    if ( (substr($area_B, 0, 1) ne " ") && $procedure) {
-				print "add a procedure-link ...\n";	
 				    $section_tag++;
-				    $words[0]            =~ s/\.$//;
-				    $sections{$words[0]} = "#SEC$section_tag";
-				    $source[$line_no]    = "<a name=\"SEC$section_tag\">".$line."</a>";
+				    $words[0]                 =~ s/\.$//;
+
+				    $sections{$words[0]}      = "#SEC$section_tag";
+				    $source[$line_no]         = "<a name=\"SEC$section_tag\">".$line."</a>";
 			    }	
 			    else {
 				    $source[$line_no] = $line;
@@ -238,7 +231,6 @@ sub add_main_links {
 			@words=();
 		}
 		
-		print "current line (2) : $source[$line_no] \n";
 	    $line_no++;
 	}
 
@@ -256,29 +248,25 @@ sub section_copy_links {
 	my $line_no = 0;
 	foreach my $line ( @{$source} ) {
 
-print "DEBUG - output : ' . $line" . "\n";
-
-		### ignore 'comment' lines
-		if ( (substr($line, 6, 1) eq '*') || $line =~ /'comments'/  ) {
+		### ignore 'comment' / 'break' lines
+		if ( $line =~ /comment/i || $line =~ /break/i ) {
 			$line_no++;
 			next;
 		}
-		
+
 		my ( $area_A, $area_B ) =  unpack("(A7A65)",$line);
 
         ### process 'PERFORM' statements - add links to enable navigation to the appropriate 'section' ###	
 		if ( $line =~ /\sPERFORM/i) {
 			my @words = split(/ +/, $area_B);
-			
-			# remove 'period' at end of SECTION name (if it exists)
-			if ($words[2] =~ /\.$/)
-			{
+
+			# remove 'period' at end of name (if it exists)
+			if ($words[2] =~ /\.$/) {
 				chop($words[2]);
 			}			
-            
+
             ### check if this 'word' is in SECTION hash ###
-			if (exists ( $sections->{$words[2]} ) )          
-			{
+			if (exists ( $sections->{$words[2]} ) ) { 
 				my $section_name = $words[2];
 				my $p_tag = $sections->{$section_name}; 
 				
@@ -309,14 +297,12 @@ print "DEBUG - output : ' . $line" . "\n";
 			my @words = split(/ +/, $area_B);
 
 			# remove 'period' at end of COPY name (if it exists)
-			if ($words[2] =~ /\.$/)
-			{
+			if ($words[2] =~ /\.$/) {
 				chop($words[2]);
 			}
 
 			### check if in COPY hash ###
-			if (exists ( $copys->{$words[2]} ) ) 
-			{
+			if (exists ( $copys->{$words[2]} ) ) {
 				my $copy_member_name = $words[2];
 				my $c_tag            = $copys->{$copy_member_name}; 
 				
@@ -347,14 +333,12 @@ print "DEBUG - output : ' . $line" . "\n";
 			my @words = split(/ +/, $area_B);
 			
 			# remove 'period' at end of GO TO name (if it exists)
-			if ($words[3] =~ /\.$/)
-			{
+			if ($words[3] =~ /\.$/) {
 				chop($words[3]);
 			}
 
 			### check if in SECTIONS hash ###
-			if (exists ( $sections->{$words[3]} ) ) 
-			{
+			if (exists ( $sections->{$words[3]} ) ) { 
 				my $goto_label_name = $words[3];
 				my $g_tag           = $sections->{$goto_label_name}; 
 				
@@ -407,7 +391,7 @@ sub process_keywords {
 		if ( /PROCEDURE/i ) {
 
 			# ignore 'comment' lines
-			if ( /comments/i )
+			if ( /comment/i )
 			{
 				$program[$line_no] = $_;
 				$line_no++;
@@ -505,8 +489,10 @@ sub build_source_list {
 
 				print OUT "<div id=\"code\">";
 					print OUT "<pre>";	
-					foreach ( @{$program} ) {
-						print OUT $_ . "<br>";
+					foreach my $line ( @{$program} ) {
+						if ( $line ) {	
+						    print OUT $line . "<br>";
+					    }	
 					}
 					print OUT "</pre>";
 				print OUT "</div>";

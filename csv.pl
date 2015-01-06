@@ -24,8 +24,9 @@ use 5.018;
 use strict;
 use warnings;
 
-#use feature 'switch';
+use feature 'switch';
 
+use Config::Simple;
 use Data::Dumper;
 use Getopt::Long;
 use List::Compare qw / get_intersection /;
@@ -34,16 +35,22 @@ use List::Compare qw / get_intersection /;
 # main 'control' process ..
 #------------------------------------------------------------------------------
 
-# get command line options and process all files in the specified directory
+# the start ...
 {
 
-    my $i_path;
-    my $o_path;
-    GetOptions( "input=s", \$i_path, "output=s", \$o_path );
-    unless ( $i_path && $o_path ) {
+    my $cfg;		
+    GetOptions( "config=s", \$cfg );
+    unless ( $cfg ) {
         usage();
         exit;
     }
+
+    my $i_path = $cfg->param('i_path');
+    my $o_path = $cfg->param('o_path');
+	if ( !$i_path || !$o_path ) {
+		print "CSV - please check your config file entries - input / output path entries may be missing\n\n";
+		exit;
+	}		
 
 	print "\nInput Path - $i_path";
 	print "\nOutput Path - $o_path\n";
@@ -542,6 +549,6 @@ sub build_source_list {
 #------------------------------------------------------------------------------
 sub usage {
     print "\nPerl script - csv.pl\n";
-	print "\nError - both input pathname and output pathname need to be specified\n";
-	print "Usage :- perl CSV.pl <input pathname> <output pathname> \n\n";
+	print "\nError - a config file path needs to be specified\n";
+	print "Usage :- perl CSV.pl --config='xyz.cfg' \n\n";
 }

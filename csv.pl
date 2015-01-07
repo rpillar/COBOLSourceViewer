@@ -38,13 +38,14 @@ use List::Compare qw / get_intersection /;
 # the start ...
 {
 
-    my $cfg;		
-    GetOptions( "config=s", \$cfg );
-    unless ( $cfg ) {
+    my $cfg_file;		
+    GetOptions( "config=s", \$cfg_file );
+    unless ( $cfg_file ) {
         usage();
         exit;
     }
 
+    my $cfg = new Config::Simple( $cfg_file );	  
     my $i_path = $cfg->param('i_path');
     my $o_path = $cfg->param('o_path');
 	if ( !$i_path || !$o_path ) {
@@ -164,7 +165,7 @@ sub add_main_links {
 			    }			
 			    when ( /PROCEDURE/i) {
 				    $source[$line_no] = "<span class=\"div_name\"><a name=\"Proc_Div\">".$line."</a></span>";
-				
+		            print "processing proc_div ...\n\n";		
 				    # if I have reached the 'procedure' division then set this flag - used later ...
 			 	    $procedure = 1; 				
 			    }
@@ -283,7 +284,8 @@ sub section_copy_links {
 				
 				### indent the PERFORM / 'link' by the correct amount ###
 				my $new_line = $area_A;
-				$new_line = $new_line.( ' ' x $start);     
+				my $indent = $start + 1;
+				$new_line = $new_line.( ' ' x $indent);     
 				$new_line = $new_line . $href;
 			
 				my $perform_name_len  = length($area_B) - $start;
@@ -392,11 +394,25 @@ sub process_keywords {
 			'INSPECT', 'TALLYING', 'FROM', 'UNTIL', 'COMPUTE', 'FOR', 'OF', 'BY', 'INTO', 'SET', 'DISPLAY', 'CLOSE');
 		
 	my $line_no = 0;
+	my $in_procedure_div = 0;
+
 	foreach ( @{$source} ) {
 
 		# check for 'keywords' in the PROCEDURE division
 		if ( /PROCEDURE/i ) {
+			$in_procedure_div = 1;	
+		    $program[$line_no] = $_;
+			$line_no++;
+			next;
+		}		
 
+		if ( !$in_procedure_div ) {
+		    $program[$line_no] = $_;
+			$line_no++;
+			next;
+		}
+
+		if ( $in_procedure_div ) {
 			# ignore 'comment' lines
 			if ( /comment/i )
 			{
@@ -415,8 +431,8 @@ sub process_keywords {
 				}
 				else
 				{
-					my ( $area_A, $area_B ) =  unpack( "(A7A65)", $_ );
-					@words = split(/ +|\./, $area_B);
+					my ( $area_A ) =  unpack( "(A7)", $_ );
+					@words = split(/ +|\./, $_);
 					@WORDS = map { uc } @words;
 					my $lc = List::Compare->new('--unsorted', \@keywords, \@WORDS);
 					my @intersection = $lc->get_intersection;
@@ -424,27 +440,28 @@ sub process_keywords {
 			 		# process 'keywords'
 			 		my $keyword_span       = "<span class=\"keyword\">";
 			 		my $keyword_span_close = "</span>";
-			 		my $line;
-					foreach my $match (@intersection) {
-						my $start = index( uc($area_B), $match );
-						my $prefix = substr($area_B, 0, $start);
-						
-						my $keyword_length = length($match);
-						my $keyword        = substr($area_B, $start, $keyword_length);
-						
-						my $suffix_length = length($area_B) - ($start + $keyword_length);
-						my $suffix = substr($area_B, $start + $keyword_length, $suffix_length);
-						$line   = $area_A . $prefix . $keyword_span . $keyword . $keyword_span_close . $suffix;	
-					}
+			 		my $line = $_;
+
+					#foreach my $match (@intersection) { # comment out for now !!
+					#		my $start = index( uc($line), $match );
+					#	my $prefix = substr($line, 0, $start);
+					#	
+					#	my $keyword_length = length($match);
+					#	my $keyword        = substr($line, $start, $keyword_length);
+					#	
+					#	my $suffix_length = length($line) - ($start + $keyword_length);
+					#	my $suffix = substr( substr($line,7), $start + $keyword_length, $suffix_length);
+					#	$line   = $area_A . $prefix . $keyword_span . $keyword . $keyword_span_close . $suffix;	
+					#}
 					$program[$line_no] = $line;
 					$line_no++;
 				}
-				$program[$line_no] = $_;
-				$line_no++;
+				#$program[$line_no] = $_;
+				#$line_no++;
 			}
 		}
-		$program[$line_no] = $_;
-		$line_no++;
+		#$program[$line_no] = $_;
+		#$line_no++;
 	}
 
 	return \@program;
@@ -461,38 +478,53 @@ sub build_source_list {
 		exit;
 	}
 
-	print "DEBUG1 : - opening file $file_out \n"; 
 	print OUT "<!DOCTYPE html>";
-	print "DEBUG2 : - attempting to build final source list \n"; 
 	print OUT "<html>";
 	print OUT "<head>";
 	print OUT "<meta charset=\"utf-8\">";
 	print OUT "<title>COBOL Source Viewer</title>";
-	print OUT "<link rel=\"stylesheet\" type=\"text/css\" href=\"csv.css\">";
+	print OUT "<link rel=\"stylesheet\" type=\"text/css\" href=\"css/bootstrap.min.css\">";
+	print OUT "<link rel=\"stylesheet\" type=\"text/css\" href=\"css/styles.css\">";
 	print OUT "</head>";
 	print OUT "<body>";
+
+	### sort out divisions / sections / procedure links
+	print OUT "<div id=\"left_links\">";
+
+	    ### display 'divisions list and links
+	    print OUT "<div id=\"divisions\">";
+		    print OUT "<br>" . "<a href=\"#Id_Div\" class=\"div_link\">Identification Division</a" . "<br>";
+		    print OUT "<br>" . "<a href=\"#Env_Div\" class=\"div_link\">Environment Division</a" . "<br>";
+		    print OUT "<br>" . "<a href=\"#Data_Div\" class=\"div_link\">Data Division</a" . "<br>";	
+		    print OUT "<br>" . "<a href=\"#WS_Sec\" class=\"div_link\">Working Storage</a" . "<br>";
+		    print OUT "<br>" . "<a href=\"#Link_Sec\" class=\"div_link\">Linkage Section</a" . "<br>";
+		    print OUT "<br>" . "<a href=\"#Proc_Div\" class=\"div_link\">Procedure Division</a" . "<br>";
+		    print OUT "<br>" . "<hr>";
+	    print OUT "</div>";
+
+        ### sort the sections list and place on page
+	    print OUT "<div id=\"sections_list\">";
+	        my $href1 = "<a href=\"";
+	        my $href2 = "\">";
+	        my @sections_keys = keys %{$sections_list};
+	        @sections_keys    = sort(@sections_keys);
+
+	        foreach my $section ( @sections_keys ) {
+	            if ( $section eq 'x' ) {
+	                next;
+	            }
+		        print OUT $href1 . $sections_list->{$section} . $href2 . $section . " <a/>" . "<br>";		
+	        }
+	    print OUT "</div>";
+
+	print OUT "</div>";	
 
 	# bootstrap row / container structure - INDENTED TO MAKE IT EASIER TO READ
 	print OUT "<div class='row'>";
 		print OUT "<div class='container'>";
 
-			# first three columns for division / section names
-			print OUT "<div class='col-md-3'>";
-
-				print OUT "<div id=\"divisions\">";
-					print OUT "<br>" . "<a href=\"#Id_Div\">Identification Division</a" . "<br>";
-					print OUT "<br>" . "<a href=\"#Env_Div\">Environment Division</a" . "<br>";
-					print OUT "<br>" . "<a href=\"#Data_Div\">Data Division</a" . "<br>";	
-					print OUT "<br>" . "<a href=\"#WS_Sec\">Working Storage</a" . "<br>";
-					print OUT "<br>" . "<a href=\"#Link_Sec\">Linkage Section</a" . "<br>";
-					print OUT "<br>" . "<a href=\"#Proc_Div\">Procedure Division</a" . "<br>";
-					print OUT "<br>" . "<hr>";
-				print OUT "</div>";
-
-			print OUT "</div>";
-			
-			# next six columns for code 
-			print OUT "<div class='col-md-6'>";
+			# code ... 
+			print OUT "<div class='col-md-12'>";
 
 				print OUT "<div id=\"code\">";
 					print OUT "<pre>";	
@@ -505,24 +537,6 @@ sub build_source_list {
 				print OUT "</div>";
 			print OUT "</div>";	
 
-            ### sort the sections list and place in html page ###
-
-	        print OUT "<div id=\"sections_list\">";
-
-	            my $href1 = "<a href=\"";
-	            my $href2 = "\">";
-
-	            my @sections_keys = keys %{$sections_list};
-	            @sections_keys    = sort(@sections_keys);
-
-	            foreach my $section ( @sections_keys ) {
-	        	    if ( $section eq 'x' ) {
-	        		    next;
-	        	    }
-		            print OUT $href1 . $sections_list->{$section} . $href2 . $section . " <a/>" . "<br>";		
-	            }
-	        print OUT "</div>";
-	
             ### sort the copybook list and place in html page ###
 
 	        print OUT "<div id=\"copybooks\">";

@@ -1,9 +1,44 @@
-#divisions {
+a {
+    outline: none;
+}
+a:hover, a:active, a:focus {
+    color: green;
+    outline: none;
+}
+pre {
+    border-top: none;
+    border-bottom: none;
+    background-color: #fff;
+}
+#top {
+    padding-top:10px;
+}
+#left_links {
     position: fixed;
-    top: 30;
-    left: 20;
+    /*top: 10;*/
+    left: 20px;
+    padding: 10px;
+    z-index: 10;
+}
+#divisions {
+    padding: 0 10px 0 20px;
+    border-bottom:1px solid lightgray;
+}
+#sections_list {
+    margin-top: 15px;
+    padding: 0 10px 0 20px;
+}
+#right_links {
+    position: fixed;
+    top: 10px;
+    right: 50px;
+    padding: 10px;
     z-index: 10;
 }
 .div_link {
     text-transform: uppercase;
+    text-decoration: none;
+}
+.div_link:hover {
+    text-decoration: none;
 }

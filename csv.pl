@@ -165,7 +165,6 @@ sub add_main_links {
 			    }			
 			    when ( /PROCEDURE/i) {
 				    $source[$line_no] = "<span class=\"div_name\"><a name=\"Proc_Div\">".$line."</a></span>";
-		            print "processing proc_div ...\n\n";		
 				    # if I have reached the 'procedure' division then set this flag - used later ...
 			 	    $procedure = 1; 				
 			    }
@@ -280,7 +279,7 @@ sub section_copy_links {
 				
 				### get position of PERFORM ###
 				my $start = index( uc($area_B), 'PERFORM' ); 
-				my $href = "<a href=\"$p_tag\">";
+				my $href = "<a class=\"smoothScroll\" href=\"$p_tag\">";
 				
 				### indent the PERFORM / 'link' by the correct amount ###
 				my $new_line = $area_A;
@@ -353,7 +352,7 @@ sub section_copy_links {
 				
 				### get position of the GO TO ###
 				my $start = index( uc($area_B), 'GO TO' ); 
-				my $href = "<a href=\"$g_tag\">";
+				my $href = "<a class=\"smoothScroll\" href=\"$g_tag\">";
 				
 				### indent the GO TO / 'link' by the correct amount ###
 				my $new_line = $area_A;				
@@ -485,26 +484,34 @@ sub build_source_list {
 	print OUT "<title>COBOL Source Viewer</title>";
 	print OUT "<link rel=\"stylesheet\" type=\"text/css\" href=\"css/bootstrap.min.css\">";
 	print OUT "<link rel=\"stylesheet\" type=\"text/css\" href=\"css/styles.css\">";
+	print OUT "<link href='http://fonts.googleapis.com/css?family=Lobster' rel='stylesheet' type='text/css'>";
+	print OUT "<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js\"></script>";
+	print OUT "<script src=\"js/smoothscroll.js\"></script>";
 	print OUT "</head>";
 	print OUT "<body>";
 
 	### sort out divisions / sections / procedure links
 	print OUT "<div id=\"left_links\">";
 
+	    ### display icon
+	    print OUT "<div id=\"icon\">";
+		    print OUT "<h1 style=\"text-align:center;\"><span style=\"border-bottom:1px solid #000;font-family:Lobster;\" >CSV</span></h1>" . "<br>";
+		print OUT "</div>";
+
 	    ### display 'divisions list and links
 	    print OUT "<div id=\"divisions\">";
-		    print OUT "<br>" . "<a href=\"#Id_Div\" class=\"div_link\">Identification Division</a" . "<br>";
-		    print OUT "<br>" . "<a href=\"#Env_Div\" class=\"div_link\">Environment Division</a" . "<br>";
-		    print OUT "<br>" . "<a href=\"#Data_Div\" class=\"div_link\">Data Division</a" . "<br>";	
-		    print OUT "<br>" . "<a href=\"#WS_Sec\" class=\"div_link\">Working Storage</a" . "<br>";
-		    print OUT "<br>" . "<a href=\"#Link_Sec\" class=\"div_link\">Linkage Section</a" . "<br>";
-		    print OUT "<br>" . "<a href=\"#Proc_Div\" class=\"div_link\">Procedure Division</a" . "<br>";
-		    print OUT "<br>" . "<hr>";
+		    print OUT "<a href=\"#top\" class=\"div_link smoothScroll\">Identification Division</a>";
+		    print OUT "<br>" . "<a href=\"#Env_Div\" class=\"div_link smoothScroll\">Environment Division</a>";
+		    print OUT "<br>" . "<a href=\"#Data_Div\" class=\"div_link smoothScroll\">Data Division</a>";	
+		    print OUT "<br>" . "<a href=\"#WS_Sec\" class=\"div_link smoothScroll\">Working Storage</a>";
+		    print OUT "<br>" . "<a href=\"#Link_Sec\" class=\"div_link smoothScroll\">Linkage Section</a>";
+		    print OUT "<br>" . "<a href=\"#Proc_Div\" class=\"div_link smoothScroll\">Procedure Division</a>";
+		    print OUT "<br>" . "<br>";
 	    print OUT "</div>";
 
         ### sort the sections list and place on page
 	    print OUT "<div id=\"sections_list\">";
-	        my $href1 = "<a href=\"";
+	        my $href1 = "<a class=\"smoothScroll\" href=\"";
 	        my $href2 = "\">";
 	        my @sections_keys = keys %{$sections_list};
 	        @sections_keys    = sort(@sections_keys);
@@ -527,7 +534,9 @@ sub build_source_list {
 			print OUT "<div class='col-md-12'>";
 
 				print OUT "<div id=\"code\">";
+
 					print OUT "<pre>";	
+				    print OUT "<div><span id=\"top\"></span></div>";
 					foreach my $line ( @{$program} ) {
 						if ( $line ) {	
 						    print OUT $line . "<br>";
@@ -537,23 +546,38 @@ sub build_source_list {
 				print OUT "</div>";
 			print OUT "</div>";	
 
-            ### sort the copybook list and place in html page ###
+		print OUT "</div>";	
+	print OUT "</div>";	
+	
+	### copybook links
+    print OUT "<div id=\"right_links\">";
 
-	        print OUT "<div id=\"copybooks\">";
-	            $href1 = "<a href=\"" . $o_path . "copy/";
-	            $href2 = " .html\"target=\"_blank\">";	
+	    print OUT "<div><h3><span style=\"border-bottom: 1px solid #000;\">CopyBooks</span></h3>" . "<br>" . "</div>";
 
-	            my @sorted_copy = keys %{$copys};
-	            @sorted_copy    = sort(@sorted_copy);
+        ### sort the copybook list and place in html page ###
+	    print OUT "<div id=\"copybooks\">";
+	        $href1 = "<a href=\"" . $o_path . "copy/";
+	        $href2 = " .html\"target=\"_blank\">";	
 
+	        my @sorted_copy = keys %{$copys};
+	        @sorted_copy    = sort(@sorted_copy);
+
+			my $size = @sorted_copy;
+            if ( $size ) {
 	            foreach my $copy ( @sorted_copy ) {
-	            	if ( $copy eq 'x') {
-	            		next;
-	            	}
+	         	    if ( $copy eq 'x') {
+	           		    next;
+	           	    }
 		            print OUT $href1 . $copys->{$copy} . $href2 . $copy . " <a/>" . "<br>";		
 	            }
-	        print OUT "</div>";
-	
+		    }	
+			else {
+			    print OUT "<p style=\"text-align:center;\">( None )</p>";		
+			}		
+	    print OUT "</div>";
+
+    print OUT "</div>";
+
 	print OUT "</body>";
 	print OUT "</html>";
 }

@@ -491,7 +491,7 @@ sub build_source_list {
 	print OUT "<body>";
 
 	### sort out divisions / sections / procedure links
-	print OUT "<div id=\"left_links\">";
+	print OUT "<aside id=\"left_links\">";
 
 	    ### display icon
 	    print OUT "<div id=\"icon\">";
@@ -524,59 +524,60 @@ sub build_source_list {
 	        }
 	    print OUT "</div>";
 
-	print OUT "</div>";	
+	print OUT "</aside>";	
 
-	# bootstrap row / container structure - INDENTED TO MAKE IT EASIER TO READ
-	print OUT "<div class='row'>";
-		print OUT "<div class='container'>";
+	print OUT "<section style=\"border: 0 solid lightblue;display:block;float:left;width:70%;position:relative;\">";
 
-			# code ... 
-			print OUT "<div class='col-md-12'>";
+		# code ... 
+		print OUT "<div style=\"margin:20px;padding-left:250px;border-right:1px solid lightblue;width:100%;min-width:850px;\">";
 
-				print OUT "<div id=\"code\">";
+			print OUT "<div id=\"code\">";
 
-					print OUT "<pre>";	
-				    print OUT "<div><span id=\"top\"></span></div>";
-					foreach my $line ( @{$program} ) {
-						if ( $line ) {	
-						    print OUT $line . "<br>";
-					    }	
-					}
-					print OUT "</pre>";
-				print OUT "</div>";
-			print OUT "</div>";	
-
+				print OUT "<pre>";	
+			    print OUT "<div><span id=\"top\"></span></div>";
+				foreach my $line ( @{$program} ) {
+					if ( $line ) {	
+					    print OUT $line . "<br>";
+				    }	
+				}
+	    		print OUT "</pre>";
+			print OUT "</div>";
 		print OUT "</div>";	
-	print OUT "</div>";	
+		
+	print OUT "</section>";		
 	
 	### copybook links
-    print OUT "<div id=\"right_links\">";
+    print OUT "<section style=\"display:block;float:left;width:30%;position:relative;\">";
+        
+        print OUT "<div style=\"position:absolute;width:100%;min-width:400px;margin-left:50px;\">";
 
-	    print OUT "<div><h3><span style=\"border-bottom: 1px solid #000;\">CopyBooks</span></h3>" . "<br>" . "</div>";
+	        print OUT "<div><h3><span style=\"border-bottom: 1px solid #000;\">CopyBooks</span></h3>" . "<br>" . "</div>";
 
-        ### sort the copybook list and place in html page ###
-	    print OUT "<div id=\"copybooks\">";
-	        $href1 = "<a href=\"" . $o_path . "copy/";
-	        $href2 = " .html\"target=\"_blank\">";	
+            ### sort the copybook list and place in html page ###
+	        print OUT "<div id=\"copybooks\">";
+	            $href1 = "<a href=\"" . $o_path . "copy/";
+	            $href2 = " .html\"target=\"_blank\">";	
 
-	        my @sorted_copy = keys %{$copys};
-	        @sorted_copy    = sort(@sorted_copy);
+	            my @sorted_copy = keys %{$copys};
+	            @sorted_copy    = sort(@sorted_copy);
 
-			my $size = @sorted_copy;
-            if ( $size ) {
-	            foreach my $copy ( @sorted_copy ) {
-	         	    if ( $copy eq 'x') {
-	           		    next;
-	           	    }
-		            print OUT $href1 . $copys->{$copy} . $href2 . $copy . " <a/>" . "<br>";		
-	            }
-		    }	
-			else {
-			    print OUT "<p style=\"text-align:center;\">( None )</p>";		
-			}		
+	            my $size = @sorted_copy;
+                if ( $size ) {
+	                foreach my $copy ( @sorted_copy ) {
+	         	        if ( $copy eq 'x') {
+	           	       	    next;
+	           	        }
+		                print OUT $href1 . $copys->{$copy} . $href2 . $copy . " <a/>" . "<br>";		
+	                }
+		        }	
+			    else {
+			        print OUT "<p style=\"text-align:left;\">( None )</p>";		
+			    }		
+	        print OUT "</div>";
+	            
 	    print OUT "</div>";
-
-    print OUT "</div>";
+	            
+	print OUT "</section>";    
 
 	print OUT "</body>";
 	print OUT "</html>";
